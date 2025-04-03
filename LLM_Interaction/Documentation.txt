@@ -1,0 +1,42 @@
+## 📌 Overview
+Merge Sort is an efficient, divide-and-conquer algorithm that sorts an array by splitting it into two halves and merging them back in sorted order. This implementation includes a Merge Sort algorithm, as well as Binary Search for finding elements efficiently after sorting.
+
+## 🚀 Features
+- **Efficient Sorting**: Runs in O(n log n) time complexity.
+- **Stable Sort**: Preserves the relative order of equal elements.
+- **Binary Search**: Quickly searches for an element in the sorted array.
+
+## 📂 Files Included
+- `merge_sort.cpp` → C++ implementation  
+- `merge_sort.py` → Python implementation  
+- `merge<｜begin▁of▁sentence｜>` ← JavaScript implementation  
+
+## 🔧 Installation & Usage
+### **C++**
+1. Compile and run:
+    ```sh
+    g++ merge_sort.cpp -o merge_sort
+    ./merge_sort
+    ```
+2. The program will prompt you to input an element to search for in the sorted array after performing a Merge Sort on the provided array.
+   
+### **Python**
+1. Run the script:
+    ```sh
+    python3 merge_sort.py
+    ```
+2. Similar to the C++ version, the program will prompt you to input an element to search for in the sorted array after performing a Merge Sort on the provided array.
+
+### **JavaScript**
+1. Run the script:
+    ```sh
+    node merge_sort.js
+    ```
+2. As with the C++ and Python versions, the program will prompt you to input an element to search for in the sorted array after performing a Merge Sort on the provided array.
+
+## 🛠️ Dependencies
+- C++: No additional dependencies.
+- Python: No additional dependencies.
+- JavaScript: No additional dependencies. 
+
+The code structure is straightforward, with the main sorting function located in `merge_sort` methods and auxiliary functions defined for merging subarrays and searching within the sorted array. The user interface includes an interactive prompt to input a search element after performing merge sort on the original array.
