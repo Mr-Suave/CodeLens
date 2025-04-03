@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "GitHub Repo Button Overlay",
+    "version": "1.0",
+    "description": "Adds a button overlay when visiting a GitHub repository.",
+    "permissions": ["tabs"],
+    "host_permissions": ["*://github.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://github.com/*/*"],
+        "js": ["./scripts/content.js"],
+        "run_at": "document_idle"
+      }
+    ]
+  }
+  
