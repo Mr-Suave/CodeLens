@@ -6,7 +6,7 @@ import markdown2
 from tkinter import filedialog, messagebox, scrolledtext
 from fpdf import FPDF
 import pdfkit
-import markdown_pdf
+# import markdown_pdf
 
 def read_code(file_path):
     """Reads the contents of a code file."""
