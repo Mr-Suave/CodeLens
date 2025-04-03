@@ -4,7 +4,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.getcwd(), ".."))
 DATA_EXTRACTION_DIR = os.path.join(BASE_DIR, "Data_Extraction_Files")
-DOC_FILE_PATH = os.path.join(BASE_DIR, "Documentation.txt")
+DOC_GEN_BASE_DIR = os.path.abspath(os.getcwd())
 
 def read_file(file_path):
     """Reads the contents of a file."""
@@ -31,10 +31,12 @@ def generate_documentation(user_type):
         return
     check_and_pull_model()
 
+    # Declaring the name of the documentation file dynamically
+    doc_file_path=os.path.join(DOC_GEN_BASE_DIR,f"Documentation_{user_type}.txt")
     # Reading specific files
     commit_message = read_file(os.path.join(DATA_EXTRACTION_DIR, "sample_code_commits.txt")) or "No commit messages found."
     readme_content = read_file(os.path.join(DATA_EXTRACTION_DIR, "sample_Readme.txt")) or "No README content found."
-    existing_doc = read_file("Documentation.txt") or "No existing documentation found."
+    existing_doc = read_file(doc_file_path) or "No existing documentation found."
 
     # Reading all the code files dynamically
     code_files_content=""
@@ -46,8 +48,8 @@ def generate_documentation(user_type):
     #constructing the documenatation prompt based on user type
     prompt_details ={
         "client": "Just give the basic overview of the contents in the files try to explain more functionality and uses but don't use technical terms.",
-        "novice": "Give some nice explanation of the code in files, like what code is trying to do and also dependencies. Don't make it too long.",
-        "senior": "Dependencies, structure of the code"
+        "novice": "Give some nice explanation of the code in files, like what code is trying to do and also dependencies. Don't make it too long. Don't include the entire code just explain the critical paths of the code",
+        "senior": "Dependencies, structure of the code(architecture), don't display the code just say what code do."
     }
 
     prompt= f"""
@@ -65,9 +67,13 @@ def generate_documentation(user_type):
     ### Code Files:
     {code_files_content}
     
+    **Instructions:**
+    - Write the documentation in **Markdown format**.
+    - **Do NOT copy text directly from the files**. Instead, summarize key points concisely.
+    - **DO NOT add any greetings or unnecessary text.**
+    - Format the output in **bullet points** and **headings** for clarity.
     Provide documentation in Markdown format focused on: {prompt_details.get(user_type, 'General documentation')}.
-    Try to give in points.
-    Apart from documentation text don't give any other text.It is a strict rule for example don't say things like sure here is the explanation etc.
+    The documentation must start with the sentence "The documentation generated for {user_type} is as follow: ".
     """
 
     print("Generating the documentation")
@@ -78,11 +84,11 @@ def generate_documentation(user_type):
 
     documentation_text = response.response.strip() if hasattr(response, "response") else "No documentation generated."
     
-    with open("Documentation.txt", "w", encoding="utf-8") as doc_file:
+    with open(doc_file_path, "w", encoding="utf-8") as doc_file:
         doc_file.write(documentation_text)
     
-    print("Documentation saved to Documentation.txt")
+    print(f"Documentation saved to {doc_file_path}")
 
 # Set user type
-user_type = "senior"
+user_type = "client"
 generate_documentation(user_type)
