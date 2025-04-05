@@ -69,7 +69,7 @@ def extract_readme_file(repo_path,output_dir):
             try:
                 with open(readme_path,"r",encoding="utf-8",errors="ignore") as f:
                     content=f.read()
-                output_path=os.path.join(output_dir,"README_output.txt")
+                output_path=os.path.join(output_dir,"ReadME.txt")
                 with open(output_path,"w",encoding="utf-8") as op_file:
                     op_file.write(content)
                 print(f"ReadMe file is successfully written to the file : {output_path}")
@@ -130,8 +130,8 @@ if valid_github_url(repo_url):
         os.chdir(repo_path)
 
         output_file = os.path.join(original_cwd, "git_files.txt")
-        output_commit_file = os.path.join(original_cwd, "git_commit_files.txt")
         output_dir = os.path.abspath(os.path.join(original_cwd, "Data_Extraction_Files"))
+        output_commit_file = os.path.join(output_dir, "Commit_messages.txt")
         print(f"Output directory is: {output_dir}")  # debugging statement
 
         # Ensure the file is cleared before writing
