@@ -3,7 +3,7 @@ param (
 )
 
 if ($Command -ne "generate") {
-    Write-Host "Test - 6"
+    Write-Host "Test - r"
     exit 1
 }
 
