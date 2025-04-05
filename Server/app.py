@@ -9,42 +9,25 @@ from pymongo import MongoClient
 from datetime import datetime
 
 # Streamlit UI Configuration
-st.set_page_config(page_title="File Uploader", page_icon="📂", layout="centered")
-st.title("📂 Upload File to Google Drive,Store it in MongoDB"
-" & Verify GitHub Repo")
+st.set_page_config(page_title="Batch File Uploader", page_icon="📂", layout="centered")
+st.title("📂 Batch Upload Files to Google Drive & Store in MongoDB")
 
-# GitHub Repo Verification Section
-st.subheader("🔗 Enter GitHub Repository URL")
-github_url = st.text_input("GitHub Repository URL", placeholder="https://github.com/user/repo")
-github_token = st.text_input("GitHub Token (for private repos)", type="password")
+# GitHub Repository Information
+REPO_NAME = "raghavaa2506/CODELENS"
+FOLDER_PATH = "LLM_Interaction"  # Folder containing text files
+GITHUB_TOKEN = "raghava2506"  # Replace with your GitHub token
 
-def verify_github_repo(repo_url, token):
-    """Verifies if a GitHub repository exists."""
-    try:
-        if "github.com/" not in repo_url:
-            return False, "❌ Invalid GitHub URL!"
-
-        repo_name = repo_url.split("github.com/")[-1]  # Extract user/repo
-        g = Github(token) if token else Github()  # Use token if provided
-        repo = g.get_repo(repo_name)
-        return True, f"✅ Repository '{repo.full_name}' is valid!"
-    except Exception as e:
-        return False, f"❌ Error: {str(e)}"
-
-if github_url:
-    if st.button("🔍 Verify GitHub Repo"):
-        valid, message = verify_github_repo(github_url, github_token)
-        st.success(message) if valid else st.error(message)
-
-# File Upload Section
-st.subheader("📤 Upload a File to Google Drive")
-uploaded_file = st.file_uploader("Choose a file", type=["txt", "pdf", "jpg", "png", "zip"])
+# MongoDB Configuration
+MONGO_URI = "mongodb://localhost:27017/"
+MONGO_DB = "Raghavendra"
+MONGO_COLLECTION = "Sastry"
 
 # Google Drive Authentication using Service Account
 SERVICE_ACCOUNT_FILE = "fileuploaderapp-454310-b3fb5dbe37a4.json"
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 FOLDER_ID = '1YiRmfbNlhT_NJXEwe6QGJ-ApOH3xW-rR'  # Replace with actual folder ID
 
+# Function to authenticate Google Drive
 def authenticate_drive():
     """Authenticate and return a Google Drive API client."""
     if not os.path.exists(SERVICE_ACCOUNT_FILE):
@@ -53,55 +36,88 @@ def authenticate_drive():
     creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     return build("drive", "v3", credentials=creds)
 
-def upload_to_drive(file, folder_id=FOLDER_ID):
+# Function to upload a file to Google Drive
+def upload_to_drive(file_path, file_name, folder_id=FOLDER_ID):
     """Uploads a file to Google Drive under the correct account."""
     drive_service = authenticate_drive()
     if not drive_service:
-        return "❌ Google Drive authentication failed!"
-    
-    # Use a temporary file to prevent permission issues
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(file.getbuffer())  # Save uploaded file
-        temp_file_path = temp_file.name  # Get temp file path
+        return None, "❌ Google Drive authentication failed!"
     
     try:
-        file_metadata = {"name": file.name, "parents": [folder_id] if folder_id else []}
-        media = MediaFileUpload(temp_file_path, resumable=True)
+        file_metadata = {"name": file_name, "parents": [folder_id] if folder_id else []}
+        media = MediaFileUpload(file_path, resumable=True)
         uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         file_id = uploaded_file.get("id")
         file_url = f"https://drive.google.com/file/d/{file_id}/view"
         
         # Store the file URL in MongoDB
-        store_file_url_in_mongodb(file.name, file_url)
+        store_file_url_in_mongodb(file_name, file_url)
         
-        return f"✅ File uploaded successfully! [View File]({file_url})"
+        return file_url, f"✅ File '{file_name}' uploaded successfully! [View File]({file_url})"
     except Exception as e:
-        return f"❌ Upload failed: {str(e)}"
-    finally:
-        if os.path.exists(temp_file_path):
-            try:
-                os.remove(temp_file_path)
-            except Exception as e:
-                st.warning(f"⚠️ Could not delete temp file: {e}")
+        return None, f"❌ Upload failed for '{file_name}': {str(e)}"
 
+# Function to store file URL in MongoDB
 def store_file_url_in_mongodb(file_name, file_url):
     """Stores the file URL in MongoDB."""
     try:
-        client = MongoClient("mongodb://localhost:27017/")
-        db = client["Raghavendra"]
-        collection = db["Sastry"]
+        client = MongoClient(MONGO_URI)
+        db = client[MONGO_DB]
+        collection = db[MONGO_COLLECTION]
         file_data = {
             "file_name": file_name,
             "file_url": file_url,
-            "uploaded_at": datetime.utcnow()  # Use datetime module for timestamp
+            "uploaded_at": datetime.utcnow()
         }
         collection.insert_one(file_data)
-        st.success("✅ File URL successfully stored in MongoDB!")
+        st.success(f"✅ File URL for '{file_name}' successfully stored in MongoDB!")
     except Exception as e:
-        st.error(f"❌ Failed to store file URL in MongoDB: {str(e)}")
+        st.error(f"❌ Failed to store file URL for '{file_name}' in MongoDB: {str(e)}")
 
-if uploaded_file:
-    st.write(f"📁 File selected: {uploaded_file.name}")
-    if st.button("🚀 Upload to Google Drive"):
-        upload_message = upload_to_drive(uploaded_file)  # Uses the correct folder ID
-        st.success(upload_message) if "✅" in upload_message else st.error(upload_message)
+# Function to fetch all text files from the specified GitHub repository folder
+def get_text_files_from_github(repo_name, folder_path, token):
+    """Fetches the list of text files from the specified GitHub repository and folder."""
+    try:
+        g = Github(token) if token else Github()  # Use token if provided
+        repo = g.get_repo(repo_name)
+        contents = repo.get_contents(folder_path)
+        text_files = []
+
+        while contents:
+            file_content = contents.pop(0)
+            if file_content.type == "dir":
+                contents.extend(repo.get_contents(file_content.path))  # Fetch nested files
+            elif file_content.name.endswith('.txt'):
+                text_files.append(file_content)
+
+        return text_files
+    except Exception as e:
+        st.error(f"❌ Error fetching text files from GitHub: {str(e)}")
+        return []
+
+# Function to download a file from GitHub
+def download_file_from_github(file, download_path):
+    """Downloads the file from GitHub to a local path."""
+    try:
+        with open(download_path, 'wb') as f:
+            f.write(file.decoded_content)
+        return True
+    except Exception as e:
+        st.error(f"❌ Error downloading file '{file.name}': {str(e)}")
+        return False
+
+# Main Execution
+st.subheader("📤 Uploading Text Files from GitHub to Google Drive")
+
+# Fetch text files from GitHub folder
+github_files = get_text_files_from_github(REPO_NAME, FOLDER_PATH, GITHUB_TOKEN)
+
+if github_files:
+    for file in github_files:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            if download_file_from_github(file, temp_file.name):
+                file_url, upload_message = upload_to_drive(temp_file.name, file.name)  
+                st.write(upload_message)
+                os.remove(temp_file.name)  # Clean up temporary file
+else:
+    st.write("❌ No text files found in the specified GitHub repository and folder.")
