@@ -69,7 +69,7 @@ def extract_readme_file(repo_path,output_dir):
             try:
                 with open(readme_path,"r",encoding="utf-8",errors="ignore") as f:
                     content=f.read()
-                output_path=os.path.join(output_dir,"README_output.txt")
+                output_path=os.path.join(output_dir,"ReadME.txt")
                 with open(output_path,"w",encoding="utf-8") as op_file:
                     op_file.write(content)
                 print(f"ReadMe file is successfully written to the file : {output_path}")
@@ -125,16 +125,17 @@ if valid_github_url(repo_url):
 
     if os.path.isdir(repo_path):
         original_cwd = os.getcwd()
+        print(original_cwd)
 
         os.chdir(repo_path)
         print(f"Changed directory to: {repo_path}")
 
-        output_file = os.path.join(original_cwd, "git_files.txt")
-        output_commit_file = os.path.join(original_cwd, "git_commit_files.txt")
+        # output_file = os.path.join(original_cwd, "git_files.txt")
+        output_commit_file = os.path.join(original_cwd, "Commit_messages.txt")
         output_dir = os.path.abspath(os.path.join(original_cwd, "..", "Data_Extraction_Files"))
         
         # Ensure the file is cleared before writing
-        open(output_file, "w").close()
+        # open(output_file, "w").close()
         open(output_commit_file, "w").close()
 
         modified_files = extract_files(" M")
@@ -147,10 +148,10 @@ if valid_github_url(repo_url):
 
         extract_readme_file(repo_path,output_dir)
 
-        print(f"\n Output written to {output_file}")
+        # print(f"\n Output written to {output_file}")
 
         os.chdir(original_cwd)
-        # print(f"The original directory is:{original_cwd}")  # debugging statement
+        print(f"The original directory is:{original_cwd}")  # debugging statement
 
         llm_script=os.path.join(original_cwd,"code_documentation_generation_1.py")
 
