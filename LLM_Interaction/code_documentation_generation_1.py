@@ -78,16 +78,16 @@ def generate_documentation(user_type,repo_path):
 
     print("Generating the documentation")
     start_time=time.time()
-    #response=ollama.generate(model="deepseek-coder:6.7b",prompt=prompt)
-    # print("Done")
-    # print(f"Time taken: {time.time() - start_time:.2f} seconds")
+    response=ollama.generate(model="deepseek-coder:6.7b",prompt=prompt)
+    print("Done")
+    print(f"Time taken: {time.time() - start_time:.2f} seconds")
 
-    # documentation_text = response.response.strip() if hasattr(response, "response") else "No documentation generated."
+    documentation_text = response.response.strip() if hasattr(response, "response") else "No documentation generated."
     
-    # with open(doc_file_path, "w", encoding="utf-8") as doc_file:
-    #     doc_file.write(documentation_text)
+    with open(doc_file_path, "w", encoding="utf-8") as doc_file:
+        doc_file.write(documentation_text)
     
-    # print(f"Documentation saved to {doc_file_path}")
+    print(f"Documentation saved to {doc_file_path}")
 
 if __name__=="__main__":
     if len(sys.argv)<2:
