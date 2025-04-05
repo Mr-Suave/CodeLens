@@ -30,22 +30,53 @@ def extract_files(status_prefix):
         print(f"The error obtained executing the git command: {e}")
         return []
 
-def write_to_file(file_list, label, op_file):
-    """Write all the contents of the modified and untracked files into a text file"""
-    
-    # Overwrite the file for the first section, then append for the rest
-    mode = "w" if label == "Modified Files" else "a"
-    
-    with open(op_file, mode) as output:
-        output.write(f"\n {label} Files:\n")
-        for file in file_list:
-            output.write(f"File: {file}\n")
+def write_to_file(file_list, label, output_dir):
+    """Writes contents of each file into a .txt file with same name (no folder structure)."""
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    index_file_path = os.path.join(output_dir, f"{label.replace(' ', '_').lower()}_index.txt")
+
+    with open(index_file_path, "w") as index_file:
+        index_file.write(f"{label} Files:\n")
+        index_file.write("-" * 50 + "\n")
+
+        for file_path in file_list:
             try:
-                with open(file, "r") as f:
-                    output.write(f.read())
+                file_name = os.path.basename(file_path)
+                base, _ = os.path.splitext(file_name)
+                destination_path = os.path.join(output_dir, base + ".txt")
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as src_file:
+                    content = src_file.read()
+                with open(destination_path, "w", encoding="utf-8") as dest_file:
+                    dest_file.write(content)
+
+                index_file.write(f"{file_path} -> {base + '.txt'}\n")
+
             except Exception as e:
-                output.write(f"Error reading {file}: {e}\n")
-            output.write("-" * 50 + "\n")
+                error_msg = f"Error processing {file_path}: {e}"
+                print(error_msg)
+                index_file.write(error_msg + "\n")
+
+def extract_readme_file(repo_path,output_dir):
+    """Extracts the ReadMe file from the repo and saves it in README_output.txt"""
+
+    possible_names=["README.md","README.MD","readme.md","Readme.md","README.txt","readme.txt"]
+    for name in possible_names:
+        readme_path=os.path.join(repo_path,name)
+        if os.path.isfile(readme_path):
+            try:
+                with open(readme_path,"r",encoding="utf-8",errors="ignore") as f:
+                    content=f.read()
+                output_path=os.path.join(output_dir,"README_output.txt")
+                with open(output_path,"w",encoding="utf-8") as op_file:
+                    op_file.write(content)
+                print(f"ReadMe file is successfully written to the file : {output_path}")
+            except Exception as e:
+                print(f"Error in reading README file : {e}")
+            return
+    print("README file not found in the repository.")
 
 def extract_commit_messages(repo_url, op_file):
     """Fetches the latest commit messages from the GitHub repository."""
@@ -100,6 +131,7 @@ if valid_github_url(repo_url):
 
         output_file = os.path.join(original_cwd, "git_files.txt")
         output_commit_file = os.path.join(original_cwd, "git_commit_files.txt")
+        output_dir = os.path.abspath(os.path.join(original_cwd, "..", "Data_Extraction_Files"))
         
         # Ensure the file is cleared before writing
         open(output_file, "w").close()
@@ -108,17 +140,30 @@ if valid_github_url(repo_url):
         modified_files = extract_files(" M")
         untracked_files = extract_files("??")
 
-        write_to_file(modified_files, "Modified Files", output_file)
-        write_to_file(untracked_files, "Untracked", output_file)
+        write_to_file(modified_files, "Modified Files", output_dir)
+        write_to_file(untracked_files, "Untracked", output_dir)
 
         extract_commit_messages(repo_url,output_commit_file)
+
+        extract_readme_file(repo_path,output_dir)
 
         print(f"\n Output written to {output_file}")
 
         os.chdir(original_cwd)
+        # print(f"The original directory is:{original_cwd}")  # debugging statement
+
+        llm_script=os.path.join(original_cwd,"code_documentation_generation.py")
+
+        if os.path.exists(llm_script):
+            print(f"Executing llm script:{llm_script}")
+            subprocess.run([sys.executable,llm_script,repo_path])
+        else:
+            print(f"LLM script not found:{llm_script}")
 
     else:
         print(f" The specified path does not exist or is not a directory: {repo_path}")
 
 else:
     print(" No extraction performed due to invalid URL")
+
+
