@@ -3,7 +3,7 @@ param (
 )
 
 if ($Command -ne "generate") {
-    Write-Host "This tool is created by Team 6 for the CodeLens project. Please use the 'generate' command to fulfill your wishes!"
+    Write-Host "Test - 6"
     exit 1
 }
 
@@ -32,13 +32,13 @@ if (-not $CodeLensPath) {
 }
 
 # Verify if Script.py exists
-$ScriptPath = Join-Path -Path $CodeLensPath -ChildPath "Script.py"
+$ScriptPath = Join-Path -Path $CodeLensPath -ChildPath "script.py"
 if (-not (Test-Path $ScriptPath)) {
     Write-Host "Error: Script.py not found at $ScriptPath"
     exit 1
 }
 
 # Call the Python script with GitHub URL and Repo Root
-py $ScriptPath $GitHubUrl $RepoRoot
+py $ScriptPath $GitHubUrl $RepoRoot $CodeLensPath
 
 Write-Host "Command completed!"
