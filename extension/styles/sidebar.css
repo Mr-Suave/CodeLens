@@ -1,0 +1,64 @@
+/* Floating button - Small like GitHub's "Sign up" */
+#codelens-toggle {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    background: #2ea44f;
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 10000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+/* Hover effect */
+#codelens-toggle:hover {
+    background: #22863a;
+    transform: scale(1.05);
+}
+
+/* Sidebar */
+#codelens-sidebar {
+    position: fixed;
+    top: 0;
+    right: -50vw;
+    width: 50vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #1e1e1e, #333);
+    color: white;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    z-index: 9999;
+    transition: right 0.3s ease-in-out;
+}
+
+#codelens-sidebar.slide-in {
+    right: 0;
+}
+
+/* Header */
+#codelens-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ff5e57;
+    padding: 15px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Close button */
+#codelens-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+}
