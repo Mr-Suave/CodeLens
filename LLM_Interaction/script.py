@@ -156,7 +156,7 @@ if valid_github_url(repo_url):
 
         if os.path.exists(llm_script):
             print(f"Executing llm script:{llm_script}")
-            subprocess.run([sys.executable,llm_script,repo_path])
+            subprocess.run([sys.executable,llm_script,repo_path,"client"])
         else:
             print(f"LLM script not found:{llm_script}")
 
