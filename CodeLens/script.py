@@ -69,7 +69,7 @@ def extract_readme_file(repo_path,output_dir):
             try:
                 with open(readme_path,"r",encoding="utf-8",errors="ignore") as f:
                     content=f.read()
-                output_path=os.path.join(output_dir,"ReadME.txt")
+                output_path=os.path.join(output_dir,"README_output.txt")
                 with open(output_path,"w",encoding="utf-8") as op_file:
                     op_file.write(content)
                 print(f"ReadMe file is successfully written to the file : {output_path}")
@@ -111,13 +111,14 @@ def extract_commit_messages(repo_url, op_file):
     except requests.RequestException as e:
         print(f"Error fetching commit messages: {e}")
 
-if(len(sys.argv)!=3):
+if(len(sys.argv)!=4):
     print("Not sufficient arguments")
     sys.exit(1)
 
 # repo_url = input("Enter the GitHub repository URL: ")
 
 repo_url=sys.argv[1]
+next_path = sys.argv[3]
 
 if valid_github_url(repo_url):
     # repo_path = input("Enter the path to the cloned repository: ")
@@ -125,18 +126,17 @@ if valid_github_url(repo_url):
 
     if os.path.isdir(repo_path):
         original_cwd = os.getcwd()
-        print(original_cwd)
-
+        print(f"The original directory is:{original_cwd}")  # debugging statement
         os.chdir(repo_path)
-        print(f"Changed directory to: {repo_path}")
 
-        # output_file = os.path.join(original_cwd, "git_files.txt")
-        output_commit_file = os.path.join(original_cwd, "Commit_messages.txt")
-        output_dir = os.path.abspath(os.path.join(original_cwd, "..", "Data_Extraction_Files"))
-        
+        output_file = os.path.join(original_cwd, "git_files.txt")
+        output_commit_file = os.path.join(original_cwd, "git_commit_files.txt")
+        output_dir = os.path.abspath(os.path.join(original_cwd, "Data_Extraction_Files"))
+        print(f"Output directory is: {output_dir}")  # debugging statement
+
         # Ensure the file is cleared before writing
         # open(output_file, "w").close()
-        open(output_commit_file, "w").close()
+        # open(output_commit_file, "w").close()
 
         modified_files = extract_files(" M")
         untracked_files = extract_files("??")
@@ -148,13 +148,12 @@ if valid_github_url(repo_url):
 
         extract_readme_file(repo_path,output_dir)
 
-        # print(f"\n Output written to {output_file}")
+        print(f"\n Output written to {output_file}")
 
-        os.chdir(original_cwd)
-        print(f"The original directory is:{original_cwd}")  # debugging statement
+        #os.chdir(original_cwd)
+        #print(f"The original directory is:{original_cwd}")  # debugging statement
 
-        llm_script=os.path.join(original_cwd,"code_documentation_generation_1.py")
-
+        llm_script=os.path.join(next_path,"code_documentation_generation_1.py")
         if os.path.exists(llm_script):
             print(f"Executing llm script:{llm_script}")
             subprocess.run([sys.executable,llm_script,repo_path,"client"])
