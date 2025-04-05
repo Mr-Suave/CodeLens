@@ -55,7 +55,7 @@ def write_to_file(file_list, label, output_dir):
                 index_file.write(f"{file_path} -> {base + '.txt'}\n")
 
             except Exception as e:
-                error_msg = f"Error processing {file_path}: {e}"
+                error_msg = f" Error processing {file_path}: {e}"
                 print(error_msg)
                 index_file.write(error_msg + "\n")
 
@@ -152,7 +152,7 @@ if valid_github_url(repo_url):
         os.chdir(original_cwd)
         # print(f"The original directory is:{original_cwd}")  # debugging statement
 
-        llm_script=os.path.join(original_cwd,"code_documentation_generation.py")
+        llm_script=os.path.join(original_cwd,"code_documentation_generation_1.py")
 
         if os.path.exists(llm_script):
             print(f"Executing llm script:{llm_script}")

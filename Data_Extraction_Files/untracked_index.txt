@@ -1,2 +1,5 @@
 Untracked Files:
 --------------------------------------------------
+Error processing Data_Extraction_Files/: [Errno 13] Permission denied: 'Data_Extraction_Files/'
+Documentation_client.txt -> Documentation_client.txt
+Documentation_novice.txt -> Documentation_novice.txt
