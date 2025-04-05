@@ -69,7 +69,7 @@ def extract_readme_file(repo_path,output_dir):
             try:
                 with open(readme_path,"r",encoding="utf-8",errors="ignore") as f:
                     content=f.read()
-                output_path=os.path.join(output_dir,"README_output.txt")
+                output_path=os.path.join(output_dir,"ReadME.txt")
                 with open(output_path,"w",encoding="utf-8") as op_file:
                     op_file.write(content)
                 print(f"ReadMe file is successfully written to the file : {output_path}")
@@ -130,9 +130,9 @@ if valid_github_url(repo_url):
         os.chdir(repo_path)
 
         output_file = os.path.join(original_cwd, "git_files.txt")
-        output_commit_file = os.path.join(original_cwd, "git_commit_files.txt")
         output_dir = os.path.abspath(os.path.join(original_cwd, "Data_Extraction_Files"))
         print(f"Output directory is: {output_dir}")  # debugging statement
+        output_commit_file = os.path.join(output_dir, "Commit_messages.txt")
 
         # Ensure the file is cleared before writing
         # open(output_file, "w").close()
@@ -156,7 +156,7 @@ if valid_github_url(repo_url):
         llm_script=os.path.join(next_path,"code_documentation_generation_1.py")
         if os.path.exists(llm_script):
             print(f"Executing llm script:{llm_script}")
-            subprocess.run([sys.executable,llm_script,repo_path,"client"])
+            subprocess.run([sys.executable,llm_script,repo_path,"client",next_path])
         else:
             print(f"LLM script not found:{llm_script}")
 
