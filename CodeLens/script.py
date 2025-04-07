@@ -2,6 +2,7 @@ import subprocess
 import os
 import requests
 import sys
+import shutil
 
 def valid_github_url(repo_url):
     """Checking if the given GitHub repository URL is valid."""
@@ -38,7 +39,8 @@ def write_to_file(file_list, label, output_dir):
 
     index_file_path = os.path.join(output_dir, f"{label.replace(' ', '_').lower()}_index.txt")
 
-    with open(index_file_path, "w") as index_file:
+    # Write index and file contents
+    with open(index_file_path, "w", encoding="utf-8") as index_file:
         index_file.write(f"{label} Files:\n")
         index_file.write("-" * 50 + "\n")
 
@@ -47,8 +49,10 @@ def write_to_file(file_list, label, output_dir):
                 file_name = os.path.basename(file_path)
                 base, _ = os.path.splitext(file_name)
                 destination_path = os.path.join(output_dir, base + ".txt")
+
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as src_file:
                     content = src_file.read()
+
                 with open(destination_path, "w", encoding="utf-8") as dest_file:
                     dest_file.write(content)
 
@@ -58,6 +62,16 @@ def write_to_file(file_list, label, output_dir):
                 error_msg = f" Error processing {file_path}: {e}"
                 print(error_msg)
                 index_file.write(error_msg + "\n")
+    try:
+        to_delete_1 = os.path.join(output_dir, "modified_files_index.txt")
+        to_delete_2 = os.path.join(output_dir, "untracked_index.txt")
+
+        for f in [to_delete_1, to_delete_2]:
+            if os.path.exists(f):
+                os.remove(f)
+                # print(f"Deleted: {f}")
+    except Exception as e:
+        print(f"Error deleting one of the index files: {e}")
 
 def extract_readme_file(repo_path,output_dir):
     """Extracts the ReadMe file from the repo and saves it in README_output.txt"""
@@ -88,20 +102,16 @@ def extract_commit_messages(repo_url, op_file):
         if response.status_code == 200:
             commits = response.json()
 
-            if not commits:  # Check if the list is empty
+            if not commits:
                 print("\nNo commits found.")
                 return  
 
-            with open(op_file, "a") as output:
-                output.write("\nCommit Messages:\n")  # Fixed newline issue
+            with open(op_file, "w") as output:  # <-- changed to overwrite
+                output.write("Commit Messages:\n")
+                output.write("-" * 50 + "\n")
 
-                for commit in commits[:5]:  # Get the latest 5 commits
+                for commit in commits[:5]:
                     message = commit["commit"]["message"]
-                    author = commit["commit"]["author"]["name"]
-                    date = commit["commit"]["author"]["date"]
-
-                    output.write(f"Author: {author}\n")
-                    output.write(f"Date: {date}\n")
                     output.write(f"Message: {message}\n")
                     output.write("-" * 50 + "\n")
 
@@ -141,6 +151,18 @@ if valid_github_url(repo_url):
         modified_files = extract_files(" M")
         untracked_files = extract_files("??")
 
+        if os.path.exists(output_dir):
+            for file_name in os.listdir(output_dir):
+                file_path=os.path.join(output_dir,file_name)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)  # delete the file
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)  # remove the subdirectory if anything is present
+
+                except Exception as e:
+                    print(f"Not able to delete the {file_path} because of the reason:{e}")
+
         write_to_file(modified_files, "Modified Files", output_dir)
         write_to_file(untracked_files, "Untracked", output_dir)
 
@@ -165,5 +187,3 @@ if valid_github_url(repo_url):
 
 else:
     print(" No extraction performed due to invalid URL")
-
-
