@@ -3,14 +3,14 @@ param (
 )
 
 if ($Command -ne "generate") {
-    Write-Host "Test - A"
+    Write-Host "Use: codelens generate"
     exit 1
 }
 
 # Check if in a Git repository
 $RepoRoot = git rev-parse --show-toplevel 2>$null
 if (-not $RepoRoot) {
-    Write-Host "Error: Not in a Git repository"
+    Write-Host "Error: Cannot find GitHub repo."
     exit 1
 }
 
