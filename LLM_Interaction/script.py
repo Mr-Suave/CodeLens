@@ -3,7 +3,7 @@ import os
 import requests
 import sys
 
-def valid_github_url(repo_url):
+def valid_github_url(repo_url): 
     """Checking if the given GitHub repository URL is valid."""
     try:
         api_url = repo_url.replace("https://github.com/", "https://api.github.com/repos/")
