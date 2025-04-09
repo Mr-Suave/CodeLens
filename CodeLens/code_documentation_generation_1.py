@@ -26,7 +26,7 @@ def generate_documentation(user_type,repo_path):
     """Generates documentation using multiple sources and writes to Documentation to repo."""
 
     data_extraction_dir = os.path.join(repo_path,"Data_Extraction_Files")
-    doc_file_path=os.path.join(repo_path,f"Documentation_{user_type}.txt")
+    doc_file_path=os.path.join(repo_path,f"Documentation_{user_type}.md")
 
     if not os.path.exists(data_extraction_dir):
         print(f"Error: Folder '{data_extraction_dir} not found' not found!")
@@ -90,8 +90,8 @@ def generate_documentation(user_type,repo_path):
     print(f"Documentation saved to {doc_file_path}")
 
 if __name__=="__main__":
-    if len(sys.argv)<2:
-        print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type]")
+    if len(sys.argv)<3:
+        print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type] [local_file_path]")
         sys.exit(1)
     repo_path=os.path.abspath(sys.argv[1])
     user_type=sys.argv[2] if len(sys.argv) > 2 else "client"
