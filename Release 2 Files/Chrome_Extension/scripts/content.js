@@ -4,45 +4,46 @@
   let overlay = null;
 
   function addButton() {
-      if (!/^https:\/\/github\.com\/[^\/]+\/[^\/]+$/.test(window.location.href)) {
-          if (button) {
-              button.remove();
-              button = null;
-          }
-          if (optionsMenu) {
-              optionsMenu.remove();
-              optionsMenu = null;
-          }
-          if (overlay) {
-              overlay.remove();
-              overlay = null;
-          }
-          return;
-      }
+    if (!/^https:\/\/github\.com\/[^\/]+\/[^\/]+$/.test(window.location.href)) {
+        if (button) {
+            button.remove();
+            button = null;
+        }
+        if (optionsMenu) {
+            optionsMenu.remove();
+            optionsMenu = null;
+        }
+        if (overlay) {
+            overlay.remove();
+            overlay = null;
+        }
+        return;
+    }
 
-      if (!button) {
-          button = document.createElement("div");
-          button.innerText = "≡";
-          button.style.position = "fixed";
-          button.style.top = "80px";
-          button.style.right = "20px";
-          button.style.width = "50px";
-          button.style.height = "50px";
-          button.style.background = "#2ea44f";
-          button.style.color = "white";
-          button.style.borderRadius = "50%";
-          button.style.display = "flex";
-          button.style.alignItems = "center";
-          button.style.justifyContent = "center";
-          button.style.fontSize = "20px";
-          button.style.cursor = "pointer";
-          button.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.2)";
-          button.style.zIndex = "1000";
+    if (!button) {
+        button = document.createElement("div");
+        button.innerText = "≡";
+        button.style.position = "fixed";
+        button.style.top = "120px";
+        button.style.right = "15px";
+        button.style.width = "80px"; // rectangular width
+        button.style.height = "40px"; // rectangular height
+        button.style.background = "#2ea44f";
+        button.style.color = "white";
+        button.style.borderRadius = "8px"; // softer corners instead of circle
+        button.style.display = "flex";
+        button.style.alignItems = "center";
+        button.style.justifyContent = "center";
+        button.style.fontSize = "20px";
+        button.style.cursor = "pointer";
+        button.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.2)";
+        button.style.zIndex = "1000";
 
-          button.addEventListener("click", toggleOptionsMenu);
-          document.body.appendChild(button);
-      }
-  }
+        button.addEventListener("click", toggleOptionsMenu);
+        document.body.appendChild(button);
+    }
+}
+
 
   function toggleOptionsMenu() {
       if (optionsMenu) {
