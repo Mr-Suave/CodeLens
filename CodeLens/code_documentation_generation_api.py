@@ -99,7 +99,7 @@ Provide clear, concise, and audience-specific documentation.
 
     print(f" Documentation saved to {doc_file_path}")
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type] [cwd_path]")
         sys.exit(1)
