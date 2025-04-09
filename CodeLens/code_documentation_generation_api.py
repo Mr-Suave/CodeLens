@@ -45,13 +45,13 @@ def generate_documentation(user_type, repo_path):
             code_files_content += f"\n\n## {file_name}\n\n{read_file(file_path) or ''}"
 
     prompt_details = {
-        "client": "Just give the basic overview of the contents in the files. Try to explain more functionality and uses but don't use technical terms.",
-        "novice": "Give some nice explanation of the code in files, like what the code is trying to do and also dependencies. Don't make it too long. Don't include the entire code – just explain the critical paths of the code.",
-        "senior": "Dependencies, structure of the code (architecture), don't display the code – just say what the code does."
+        "client": "Just give the basic overview of the contents in the files. Try to explain more functionality, uses and features that are developed, but don't use technical terms.",
+        "novice": "Give some nice explanation of the code in files, like what the code is trying to do and also dependencies with the other code files you will be given. Don't make it too long. Don't include the entire code – just explain the critical parts of the code. You are allowed to use the technical terms that a novice developer is expected to know and understand.",
+        "senior": "Give the dependencies, structure of the code and the architecture based on the code files given to you, don't display the code – just say what the code does."
     }
 
     prompt = f"""
-You are an AI documentation expert. Your task is to generate technical documentation in *Markdown format* based on code, README, commit messages, and existing documentation.
+You are an AI documentation expert. Your task is to generate technical documentation in *Markdown format* based on code, README, commit messages, and existing documentation which was previously generated.
 
 ---
 ###  Available Inputs:
@@ -62,7 +62,7 @@ You are an AI documentation expert. Your task is to generate technical documenta
 ####  README content:
 {readme_content}
 
-#### Existing documentation:
+#### Existing documentation previously:
 {existing_doc}
 
 #### Code Files Summary (Do NOT repeat the code):
@@ -73,8 +73,8 @@ You are an AI documentation expert. Your task is to generate technical documenta
 - Do *NOT* include or repeat any code from the inputs.
 - Do *NOT* list file contents directly.
 - Use the information to summarize *what the code does*, not what it contains.
-- Describe key *functionalities, **dependencies, and **critical logic paths*.
-- Do NOT greet or conclude – output only the documentation.
+- Describe key *functionalities, **dependencies, and **critical logic parts*.
+- Do NOT greet or conclude, output only the documentation.
 - Use bullet points, headers, and subheaders to format your response clearly.
 
 Start your response with:

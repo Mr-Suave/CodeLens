@@ -1,0 +1,5 @@
+steps:
+  - name: Set up Google Cloud credentials
+    run: echo "$GCP_SERVICE_ACCOUNT" > /tmp/service-account.json
+    env:
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
