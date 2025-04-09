@@ -1,5 +1,9 @@
 # CodeLens
 ## Group 9
+## Note : To run the tool, naviagate to the root directory of the cloned repo and then run the command : 
+```
+pip install -r req.txt
+```
 ### What is our project all about?
 If you were to contribute to an open source project, or take over your collagues project - you would have to look at their codebase **and understand it throughly.**
 Now take a moment to think about how much time you would spend doing that.

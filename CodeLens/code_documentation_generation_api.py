@@ -46,8 +46,8 @@ def generate_documentation(user_type, repo_path):
 
     prompt_details = {
         "client": "Just give the basic overview of the contents in the files. Try to explain more functionality, uses and features that are developed, but don't use technical terms.",
-        "novice": "Give some nice explanation of the code in files, like what the code is trying to do and also dependencies with the other code files you will be given. Don't make it too long. Don't include the entire code – just explain the critical parts of the code. You are allowed to use the technical terms that a novice developer is expected to know and understand.",
-        "senior": "Give the dependencies, structure of the code and the architecture based on the code files given to you, don't display the code – just say what the code does."
+        "novice": "Give some nice explanation of the code in files, like what the code is trying to do and also dependencies with the other code files you will be given. Don't make it too long. Don't include the entire code – just explain the critical parts of the code. You are allowed to use the technical terms that a novice developer is expected to know and understand like framework etc.",
+        "senior": "Give the dependencies, structure of the code and the architecture based on the code files given to you, don't display the code – just say what the code does. Also include the details of the frameworks, languages used in the project. The level of the documentation should be at the level of senior developer in the organisation"
     }
 
     prompt = f"""
