@@ -12,10 +12,10 @@ MONGO_URI = "mongodb://localhost:27017/"
 MONGO_DB = "Raghavendra"
 MONGO_COLLECTION = "Sastry"
 
-# Google Drive Authentication using Service Account
-SERVICE_ACCOUNT_FILE = "fileuploaderapp-454310-b3fb5dbe37a4.json"
+# Google Drive Authentication using Service Account (Updated path for GitHub Actions)
+SERVICE_ACCOUNT_FILE = "fileuploaderapp-454310-9e8ab3e1bc5b.json"  # Updated path
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
-FOLDER_ID = '1YiRmfbNlhT_NJXEwe6QGJ-ApOH3xW-rR'  # Replace with actual folder ID
+FOLDER_ID = '1YiRmfbNlhT_NJXEwe6QGJ-ApOH3xW-rR'  # Replace with your folder ID
 
 # Function to authenticate Google Drive
 def authenticate_drive():
@@ -23,8 +23,8 @@ def authenticate_drive():
     if not os.path.exists(SERVICE_ACCOUNT_FILE):
         print("❌ Google Drive Service Account JSON missing!")
         return None
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    return build("drive", "v3", credentials=creds)
+    credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    return build("drive", "v3", credentials=credentials)
 
 # Function to upload a file to Google Drive
 def upload_to_drive(file_path, file_name, folder_id=FOLDER_ID):
@@ -39,10 +39,10 @@ def upload_to_drive(file_path, file_name, folder_id=FOLDER_ID):
         uploaded_file = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         file_id = uploaded_file.get("id")
         file_url = f"https://drive.google.com/file/d/{file_id}/view"
-        
+
         # Store the file URL in MongoDB
         store_file_url_in_mongodb(file_name, file_url)
-        
+
         return file_url, f"✅ File '{file_name}' uploaded successfully! [View File]({file_url})"
     except Exception as e:
         return None, f"❌ Upload failed for '{file_name}': {str(e)}"
@@ -70,7 +70,6 @@ def find_md_files(folder_path):
     md_files = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            # Match specific Markdown files
             if file in ["Documentation_client.md", "Documentation_novice.md", "Documentation_senior.md"]:
                 md_files.append(os.path.join(root, file))
     return md_files
@@ -89,12 +88,10 @@ if __name__ == "__main__":
 
     print(f"Searching for Markdown files in {cloned_repo_path}...")
 
-    # Find Markdown files
     md_files = find_md_files(cloned_repo_path)
 
     if md_files:
         print(f"Found {len(md_files)} Markdown file(s) to upload.")
-        
         for file_path in md_files:
             file_name = os.path.basename(file_path)
             file_url, upload_message = upload_to_drive(file_path, file_name)  
