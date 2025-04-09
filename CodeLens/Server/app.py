@@ -67,11 +67,11 @@ def store_file_url_in_mongodb(file_name, file_url):
 
 # Function to find text files in the specified folder
 def find_text_files(folder_path):
-    """Find text files that match specific names in the specified folder."""
+    """Find MD files that match specific names in the specified folder."""
     text_files = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file in ["Documentation_client.txt", "Documentation_novice.txt", "Documentation_senior.txt"]:
+            if file in ["Documentation_client.md", "Documentation_novice.md", "Documentation_senior.md"]:
                 text_files.append(os.path.join(root, file))
     return text_files
 
