@@ -1,4 +1,4 @@
-# Release 1 Report - CodeLens
+# CodeLens
 ## Group 9
 ### What is our project all about?
 If you were to contribute to an open source project, or take over your collagues project - you would have to look at their codebase **and understand it throughly.**
