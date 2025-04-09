@@ -52,7 +52,7 @@ def generate_documentation(user_type, repo_path):
 
     prompt = f"""
 You are an AI documentation expert. Your task is to generate technical documentation in *Markdown format* based on code, README, commit messages, and existing documentation which was previously generated.
-
+We are using the already existing documentation as one of the inputs so that the output obtained includes the documentation of all the changes made till now. This documentation stands as the entire documentaion of the repo.
 ---
 ###  Available Inputs:
 
