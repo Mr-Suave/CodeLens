@@ -1,0 +1,36 @@
+{
+    "manifest_version": 3,
+    "name": "CodeLens",
+    "version": "1.0",
+    "description": "Fetch and display documentation from Google Drive",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "identity"
+    ],
+    "host_permissions": [
+      "https://www.googleapis.com/*"
+    ],
+    "oauth2": {
+      "client_id": "602926488594-bplfld0sbl0s0sbkgsv5593h1rk7ak6k.apps.googleusercontent.com",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://github.com/*/*"],
+        "js": ["scripts/content.js"],
+        "css": ["styles/style.css"]
+      }
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": ["images/basic.jpg*"],
+        "matches": ["https://github.com/*"]
+      }
+    ]
+  }
