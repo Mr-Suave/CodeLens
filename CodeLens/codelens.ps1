@@ -3,11 +3,6 @@ param (
     [string]$FileName
 )
 
-if ($Command -ne "generate") {
-    Write-Host "Use: codelens generate"
-    exit 1
-}
-
 if($Command -eq "generate"){
     # Check if in a Git repository
     $RepoRoot = git rev-parse --show-toplevel 2>$null
