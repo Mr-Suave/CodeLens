@@ -3,11 +3,12 @@ param (
     [string]$Arg1,
     [string]$CommitNumber
 )
-$ValidUserTypes = @("novice","senior","client")
 
-function ShowRecentCommits{
+$ValidUserTypes = @("novice", "senior", "client")
+
+function ShowRecentCommits {
     $commits = git log -n 10 --pretty=format:"%h %s"
-    if(-not $commits){
+    if (-not $commits) {
         Write-Host "Error: Couldn't fetch Git commits"
         exit 1
     }
@@ -59,147 +60,142 @@ function GenerateDocumentationFromCommit {
     Write-Host "Documentation generation triggered for commit $CommitNumber"
 }
 
-if ($Command -eq "generate" -and $Arg1 -and $CommitNumber){
-    GenerateDocumentationFromCommit
-}
-elseif($Command -eq "generate"){
-    if(-not $Arg1){
-        Write-Host "Usage: codelens generate {user_type}"
-        Write-Host "Usage: codelens generate {user_type} {commit_hash}"
-        exit 1
-    }
-
-    # If user type not valid
-    if($Arg1 -notin $ValidUserTypes){
-        Write-Host "Error: Invalid user type. Valid options are 'novice','senior','client'."
-        exit 1
-    }
-
-    # Check if in a Git repository
-    $RepoRoot = git rev-parse --show-toplevel 2>$null
-    if (-not $RepoRoot) {
-        Write-Host "Error: Cannot find GitHub repo."
-        exit 1
-    }
-
-    # Get GitHub URL
-    $GitHubUrl = git config --get remote.origin.url
-    if (-not $GitHubUrl) {
-        Write-Host "Error: No GitHub remote URL found"
-        exit 1
-    }
-
-    # Convert SSH URL to HTTPS (if needed)
-    $GitHubUrl = $GitHubUrl -replace "^git@github.com:", "https://github.com/" -replace "\.git$", ""
-
-    # Check for CODELENS_PATH environment variable
+function GenerateCommitMessage {
     $CodeLensPath = $env:CODELENS_PATH
     if (-not $CodeLensPath) {
         Write-Host "Error: CODELENS_PATH environment variable not set"
         exit 1
     }
 
-    # Verify if Script.py exists
-    $ScriptPath = Join-Path -Path $CodeLensPath -ChildPath "script.py"
-    if (-not (Test-Path $ScriptPath)) {
-        Write-Host "Error: Script.py not found at $ScriptPath"
-        exit 1
-    }
-
-    # Call the Python script with GitHub URL and Repo Root
-    py $ScriptPath $GitHubUrl $RepoRoot $CodeLensPath $Arg1
-
-    Write-Host "Command completed!"
-}
-elseif($command -eq "regenerate"){
-    ShowRecentCommits
-}
-elseif($Command -eq "commentify"){
-    if(-not $Arg1){
-        Write-Host "Usage: codelens commentify {file_name}"
-        exit 1
-    }
-
-    # Check for CODELENS_PATH environmental variable
-    $CodeLensPath = $env:CODELENS_PATH
-    if(-not $CodeLensPath){
-        Write-Host "Error: CODELENS_PATH environment variable not set"
-        exit 1
-    }
-
-    # Path to commentify.py
-    $CommentScript= Join-Path -Path $CodeLensPath -ChildPath "commentify.py"
-    if(-not (Test-Path $CommentScript)){
-        Write-Host "Error: commentify.py not found at $CommentScript"
-        exit 1
-    }
-
-    # Call the commentify script
-    py $CommentScript $Arg1
-
-    Write-Host "Commentify command completed!"
-}
-elseif ($Command -eq "commit") {
-elseif ($Command -eq "drawgraph") {
-    # Get repo root
-    $RepoRoot = git rev-parse --show-toplevel 2>$null
-    if (-not $RepoRoot) {
-        Write-Host "Error: Cannot find GitHub repo."
-        exit 1
-    }
-
-    # Check for CODELENS_PATH environment variable
-    $CodeLensPath = $env:CODELENS_PATH
-    if (-not $CodeLensPath) {
-        Write-Host "Error: CODELENS_PATH environment variable not set"
-        exit 1
-    }
-
-    # Path to commit message generation script
     $CommitScript = Join-Path -Path $CodeLensPath -ChildPath "commit_msg_generation.py"
     if (-not (Test-Path $CommitScript)) {
-        Write-Host "Error: commit_generation_file.py not found at $CommitScript"
+        Write-Host "Error: commit_msg_generation.py not found at $CommitScript"
         exit 1
     }
 
-    # Call the script and capture the commit message
     $CommitMessage = py $CommitScript --generate-only
-
     if (-not $CommitMessage -or $CommitMessage.Trim() -eq "") {
-        Write-Host " Commit message could not be generated."
+        Write-Host "Commit message could not be generated."
         exit 1
     }
 
-    Write-Host "`n Generated Commit Message:"
-    Write-Host $CommitMessage
-
-    # Run the actual Git commit
-    git commit -a -m "$CommitMessage"
+    return $CommitMessage
 }
-else {
-    Write-Host "Usage:"
-    Write-Host "  codelens generate"
-    Write-Host "  codelens commentify {file_name}"
-    Write-Host "  codelens commit"
-    # Path to draw_graph.py
-    $GraphScript = Join-Path -Path $CodeLensPath -ChildPath "draw_graph.py"
-    if (-not (Test-Path $GraphScript)) {
-        Write-Host "Error: draw_graph.py not found at $GraphScript"
-        exit 1
+
+switch ($Command) {
+    "generate" {
+        if ($Arg1 -and $CommitNumber) {
+            GenerateDocumentationFromCommit
+        }
+        elseif (-not $Arg1) {
+            Write-Host "Usage: codelens generate {user_type}"
+            Write-Host "Usage: codelens generate {user_type} {commit_hash}"
+            exit 1
+        }
+        elseif ($Arg1 -notin $ValidUserTypes) {
+            Write-Host "Error: Invalid user type. Valid options are 'novice','senior','client'."
+            exit 1
+        }
+        else {
+            $RepoRoot = git rev-parse --show-toplevel 2>$null
+            if (-not $RepoRoot) {
+                Write-Host "Error: Cannot find GitHub repo."
+                exit 1
+            }
+
+            $GitHubUrl = git config --get remote.origin.url
+            if (-not $GitHubUrl) {
+                Write-Host "Error: No GitHub remote URL found"
+                exit 1
+            }
+
+            $GitHubUrl = $GitHubUrl -replace "^git@github.com:", "https://github.com/" -replace "\.git$", ""
+
+            $CodeLensPath = $env:CODELENS_PATH
+            if (-not $CodeLensPath) {
+                Write-Host "Error: CODELENS_PATH environment variable not set"
+                exit 1
+            }
+
+            $ScriptPath = Join-Path -Path $CodeLensPath -ChildPath "script.py"
+            if (-not (Test-Path $ScriptPath)) {
+                Write-Host "Error: Script.py not found at $ScriptPath"
+                exit 1
+            }
+
+            py $ScriptPath $GitHubUrl $RepoRoot $CodeLensPath $Arg1
+            Write-Host "Command completed!"
+        }
     }
 
-    # Run the Python graph drawing script
-    py $GraphScript $RepoRoot
+    "regenerate" {
+        ShowRecentCommits
+    }
 
-    Write-Host "Function call graph generation triggered!"
-}
+    "commentify" {
+        if (-not $Arg1) {
+            Write-Host "Usage: codelens commentify {file_name}"
+            exit 1
+        }
 
-else{
-    Write-Host "Usage:"
-    Write-Host "  codelens generate {user_type}"
-    Write-Host "  codelens commentify {file_path}"
-    Write-Host "  codelens generate {user_type} {commit_hash}"
-    Write-Host "  codelens regenerate"
-    Write-Host "  codelens drawgraph"
-    exit 1
+        $CodeLensPath = $env:CODELENS_PATH
+        if (-not $CodeLensPath) {
+            Write-Host "Error: CODELENS_PATH environment variable not set"
+            exit 1
+        }
+
+        $CommentScript = Join-Path -Path $CodeLensPath -ChildPath "commentify.py"
+        if (-not (Test-Path $CommentScript)) {
+            Write-Host "Error: commentify.py not found at $CommentScript"
+            exit 1
+        }
+
+        py $CommentScript $Arg1
+        Write-Host "Commentify command completed!"
+    }
+
+    "commit" {
+        $CommitMessage = GenerateCommitMessage
+        Write-Host "`nGenerated Commit Message:"
+        Write-Host $CommitMessage
+
+        git add .
+        git commit -m "$CommitMessage"
+        Write-Host "Commit completed!"
+    }
+
+    "drawgraph" {
+        $RepoRoot = git rev-parse --show-toplevel 2>$null
+        if (-not $RepoRoot) {
+            Write-Host "Error: Cannot find GitHub repo."
+            exit 1
+        }
+
+        $CommitMessage = GenerateCommitMessage
+        Write-Host "`nGenerated Commit Message:"
+        Write-Host $CommitMessage
+
+        git commit -a -m "$CommitMessage"
+
+        $CodeLensPath = $env:CODELENS_PATH
+        $GraphScript = Join-Path -Path $CodeLensPath -ChildPath "draw_graph.py"
+        if (-not (Test-Path $GraphScript)) {
+            Write-Host "Error: draw_graph.py not found at $GraphScript"
+            exit 1
+        }
+
+        py $GraphScript $RepoRoot
+        Write-Host "Function call graph generation triggered!"
+    }
+
+    Default {
+        Write-Host "Usage:"
+        Write-Host "  codelens generate {user_type}"
+        Write-Host "  codelens generate {user_type} {commit_hash}"
+        Write-Host "  codelens regenerate"
+        Write-Host "  codelens commentify {file_path}"
+        Write-Host "  codelens drawgraph"
+        Write-Host "  codelens commit"
+        exit 1
+    }
 }
