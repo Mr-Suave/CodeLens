@@ -329,7 +329,7 @@ def parse_js_file(file_path):
     
     return functions, edges
 
-# BOOM
+
 def main(repo_path):
     """Main function to parse a repository and generate a call graph."""
     graph = defaultdict(list)
