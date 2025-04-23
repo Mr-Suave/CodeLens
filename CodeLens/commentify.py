@@ -8,7 +8,7 @@ import time
 GEMINI_API_KEY = "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
 genai.configure(api_key=GEMINI_API_KEY)
 
-def chunk_code(lines, max_chars=10000): # we are considering the default max_chars to be 10000
+def chunk_code(lines, max_chars=20000): # we are considering the default max_chars to be 10000
     # this function chunk_code make the codeinto chuncks and then return that to the commentify to facilitate the limited prompt size of the llm used
     chunks, current_chunk=[],[]
     current_length =0
