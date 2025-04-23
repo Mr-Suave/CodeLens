@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 import networkx as nx
 import matplotlib.pyplot as plt
+import google.generativeai as genai
 
 # Directories to exclude from analysis
 EXCLUDED_DIRS = [
