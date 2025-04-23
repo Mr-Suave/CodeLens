@@ -58,7 +58,27 @@ function GenerateDocumentationFromCommit {
 
     Write-Host "Documentation generation triggered for commit $Arg2"
 }
+function GenerateCommitMessage {
+    $CodeLensPath = $env:CODELENS_PATH
+    if (-not $CodeLensPath) {
+        Write-Host "Error: CODELENS_PATH environment variable not set"
+        exit 1
+    }
 
+    $CommitScript = Join-Path -Path $CodeLensPath -ChildPath "commit_msg_generation.py"
+    if (-not (Test-Path $CommitScript)) {
+        Write-Host "Error: commit_msg_generation.py not found at $CommitScript"
+        exit 1
+    }
+
+    $CommitMessage = py $CommitScript --generate-only
+    if (-not $CommitMessage -or $CommitMessage.Trim() -eq "") {
+        Write-Host "Commit message could not be generated."
+        exit 1
+    }
+
+    return $CommitMessage
+}
 function FindBug { 
     $Description = $Arg1
     $SuspectsJson = $Arg2
@@ -81,7 +101,7 @@ function FindBug {
     }
 
     # Call Python script with bug description and suspects
-    py $ScriptPath "`"$Description`"" "`"$SuspectsJson`"" $CodeLensPath
+    py $ScriptPath ""$Description"" ""$SuspectsJson"" $CodeLensPath
 
     Write-Host "Bug tracing initiated based on description and suspect functions..."
 }
@@ -166,6 +186,16 @@ elseif($Command -eq "commentify"){
 
     Write-Host "Commentify command completed!"
 }
+elseif($Command -eq "commit"){
+    $CommitMessage = GenerateCommitMessage
+    Write-Host "`nGenerated Commit Message:"
+    Write-Host $CommitMessage
+
+    git add .
+    git commit -m "$CommitMessage"
+    Write-Host "Commit completed!"
+
+}
 elseif ($Command -eq "findbug") {
     FindBug
 }
@@ -175,7 +205,8 @@ else{
     Write-Host "  codelens commentify {file_path}"
     Write-Host "  codelens generate {user_type} {commit_hash}"
     Write-Host "  codelens regenerate"
+    Write-Host "  codelens commit"
     Write-Host "  codelens findbug {description_string} {suspect_functions_json}"
-    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" '[`"uploadImage`", `"handleImageInput`", `"sendToServer`"]'"
+    Write-Host "  Ex: codelens findbug "App crashes when uploading image" '["uploadImage", "handleImageInput", "sendToServer"]'"
     exit 1
 }
