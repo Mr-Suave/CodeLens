@@ -121,7 +121,7 @@ def extract_commit_messages(repo_url, op_file):
     except requests.RequestException as e:
         print(f"Error fetching commit messages: {e}")
 
-if(len(sys.argv)!=4):
+if(len(sys.argv)!=5):
     print("Not sufficient arguments")
     sys.exit(1)
 
@@ -129,6 +129,7 @@ if(len(sys.argv)!=4):
 
 repo_url=sys.argv[1]
 next_path = sys.argv[3]
+user_type=sys.argv[4]
 
 if valid_github_url(repo_url):
     # repo_path = input("Enter the path to the cloned repository: ")
@@ -178,7 +179,7 @@ if valid_github_url(repo_url):
         llm_script=os.path.join(next_path,"code_documentation_generation_api.py")
         if os.path.exists(llm_script):
             print(f"Executing llm script:{llm_script}")
-            subprocess.run([sys.executable,llm_script,repo_path,"senior",next_path])
+            subprocess.run([sys.executable,llm_script,repo_path,user_type,next_path])
         else:
             print(f"LLM script not found:{llm_script}")
 
