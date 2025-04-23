@@ -65,9 +65,39 @@ elseif($Command -eq "commentify"){
 
     Write-Host "Commentify command completed!"
 }
-else{
+elseif ($Command -eq "commit") {
+    # Check for CODELENS_PATH environment variable
+    $CodeLensPath = $env:CODELENS_PATH
+    if (-not $CodeLensPath) {
+        Write-Host "Error: CODELENS_PATH environment variable not set"
+        exit 1
+    }
+
+    # Path to commit message generation script
+    $CommitScript = Join-Path -Path $CodeLensPath -ChildPath "commit_msg_generation.py"
+    if (-not (Test-Path $CommitScript)) {
+        Write-Host "Error: commit_generation_file.py not found at $CommitScript"
+        exit 1
+    }
+
+    # Call the script and capture the commit message
+    $CommitMessage = py $CommitScript --generate-only
+
+    if (-not $CommitMessage -or $CommitMessage.Trim() -eq "") {
+        Write-Host " Commit message could not be generated."
+        exit 1
+    }
+
+    Write-Host "`n Generated Commit Message:"
+    Write-Host $CommitMessage
+
+    # Run the actual Git commit
+    git commit -a -m "$CommitMessage"
+}
+else {
     Write-Host "Usage:"
     Write-Host "  codelens generate"
     Write-Host "  codelens commentify {file_name}"
+    Write-Host "  codelens commit"
     exit 1
 }
