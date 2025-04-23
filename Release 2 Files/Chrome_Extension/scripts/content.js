@@ -22,11 +22,11 @@
 
     if (!button) {
         button = document.createElement("div");
-        button.innerText = "≡";
+        button.innerText = "View Documentation";
         button.style.position = "fixed";
         button.style.top = "120px";
         button.style.right = "15px";
-        button.style.width = "80px"; // rectangular width
+        button.style.width = "105px"; // rectangular width
         button.style.height = "40px"; // rectangular height
         button.style.background = "#2ea44f";
         button.style.color = "white";
@@ -34,7 +34,7 @@
         button.style.display = "flex";
         button.style.alignItems = "center";
         button.style.justifyContent = "center";
-        button.style.fontSize = "20px";
+        button.style.fontSize = "11px";
         button.style.cursor = "pointer";
         button.style.boxShadow = "0px 4px 6px rgba(0, 0, 0, 0.2)";
         button.style.zIndex = "1000";
