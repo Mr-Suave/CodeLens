@@ -3,6 +3,7 @@ import os
 import ast
 import re
 from collections import defaultdict
+from typing import Optional
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -329,37 +330,69 @@ def parse_js_file(file_path):
     
     return functions, edges
 
+def extract_function_code(file_path: str, function_name: str) -> Optional[str]:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                source = f.read()
+            tree = ast.parse(source)
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+                    start_line = node.lineno - 1
+                    end_line = node.end_lineno
+                    return "\n".join(source.splitlines()[start_line:end_line])
+            return None
+        except Exception as e:
+            print(f"Error extracting {function_name} from {file_path}: {e}")
+            return None
+        
+
+def get_code_blocks_for_nodes(nodes: ast.Set[ast.Tuple[str, str]]) -> ast.Dict[str, str]:
+    result = {}
+    for path, func in nodes:
+        code = extract_function_code(path, func)
+        if code:
+            result[f"{path}::{func}"] = code
+    return result
+
 # BOOM
 def main(repo_path):
     """Main function to parse a repository and generate a call graph."""
     graph = defaultdict(list)
     all_functions = set()
-    
+    function_code_blocks = {}
+
     print(f"Analyzing repository: {repo_path}")
     print("Excluding directories:", ", ".join(EXCLUDED_DIRS))
-    
+
     # Get source files with exclusions
     source_files = get_source_files(repo_path)
     print(f"Found {len(source_files)} source files to analyze after filtering")
-    
+
     file_count = 0
     for file_path in source_files:
         file_count += 1
-        
-        # Show progress
+
         if file_count % 10 == 0 or file_count == len(source_files):
             print(f"Processing file {file_count}/{len(source_files)}: {os.path.basename(file_path)}")
-        
+
         try:
             if file_path.endswith('.py'):
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     try:
-                        tree = ast.parse(f.read())
+                        source = f.read()
+                        tree = ast.parse(source)
                         visitor = PythonFunctionVisitor(file_path)
                         visitor.visit(tree)
                         all_functions.update(visitor.functions)
                         for src, dst in visitor.edges:
                             graph[src].append(dst)
+
+                        # Extract code for each Python function
+                        for _, func in visitor.functions:
+                            code = extract_function_code(file_path, func)
+                            if code:
+                                function_code_blocks[f"{file_path}::{func}"] = code
+
                     except Exception as e:
                         print(f"Error parsing Python file {file_path}: {e}")
                         continue
@@ -369,21 +402,28 @@ def main(repo_path):
                 all_functions.update(functions)
                 for src, dst in edges:
                     graph[src].append(dst)
-                    
+
+                # Extract Java code blocks
+                code_blocks = get_code_blocks_for_nodes(functions)
+                function_code_blocks.update(code_blocks)
+
             elif file_path.endswith('.js'):
                 functions, edges = parse_js_file(file_path)
                 all_functions.update(functions)
                 for src, dst in edges:
                     graph[src].append(dst)
-        
+
+                # Extract JavaScript code blocks
+                code_blocks = get_code_blocks_for_nodes(functions)
+                function_code_blocks.update(code_blocks)
+
         except Exception as e:
             print(f"Unexpected error processing {file_path}: {e}")
             continue
-    
-    # Output all functions with clean labels (limited output for large repos)
+
+    # Output all functions
     print("\n=== ALL FUNCTIONS ===")
     function_list = [clean_node_label(func) for func in sorted(all_functions)]
-    
     if len(function_list) > 100:
         print(f"Found {len(function_list)} functions. Showing first 100:")
         for func in function_list[:100]:
@@ -392,47 +432,64 @@ def main(repo_path):
     else:
         for func in function_list:
             print(func)
-    
+
     print(f"\nTotal functions found: {len(all_functions)}")
-    
-    # Output the call graph (limited output for large graphs)
+
+    # Output call graph
     print("\n=== FUNCTION CALL GRAPH (Adjacency List) ===")
     graph_items = list(sorted(graph.items()))
-    
     if len(graph_items) > 50:
         print(f"Found {len(graph_items)} function relationships. Showing first 50:")
         for func, callees in graph_items[:50]:
-            if callees:  # Only show functions that call others
-                print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees[:5])}{', ...' if len(callees) > 5 else ''}")
+            if callees:
+                print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(c) for c in callees[:5])}{', ...' if len(callees) > 5 else ''}")
         print(f"... and {len(graph_items) - 50} more relationships.")
     else:
         for func, callees in graph_items:
             if callees:
-                print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees)}")
-    
-    # Generate visualization with limits
+                print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(c) for c in callees)}")
+
+    # Visualization
     if graph:
         print("\nGenerating call graph visualization...")
         try:
-            draw_call_graph(graph)
+            draw_call_graph(graph, function_code_blocks)
         except Exception as e:
             print(f"Error generating graph visualization: {e}")
     else:
         print("\nNo function call relationships found to visualize.")
-    
+
     # Write results to file
     with open("function_list.txt", "w", encoding="utf-8") as f:
         f.write("=== ALL FUNCTIONS ===\n")
         for func in sorted(all_functions):
             f.write(f"{clean_node_label(func)}\n")
-        
+
         f.write("\n=== FUNCTION CALL GRAPH ===\n")
         for func in sorted(graph):
-            if graph[func]:  # Only include functions that call others
-                f.write(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in graph[func])}\n")
-    
+            if graph[func]:
+                f.write(f"{clean_node_label(func)} --> {', '.join(clean_node_label(c) for c in graph[func])}\n")
+
     print("\nResults written to function_list.txt")
 
+    print("\n=== EXTRACTED FUNCTION CODE BLOCKS (Sample) ===")
+    if not function_code_blocks:
+        print("No code blocks extracted.")
+    else:
+        sample_count = 5  # adjust if you want to see more
+        for i, (key, code) in enumerate(function_code_blocks.items()):
+            print(f"\nFunction: {key}")
+            print("Code:")
+            print(code)
+            print("-" * 40)
+            if i + 1 >= sample_count:
+                print(f"... and {len(function_code_blocks) - sample_count} more functions.\n")
+                break
+
+
+    
+
+    
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
