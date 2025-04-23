@@ -101,7 +101,7 @@ function FindBug {
     }
 
     # Call Python script with bug description and suspects
-    py $ScriptPath "`"$Description`"" "`"$SuspectsJson`"" $CodeLensPath
+    py $ScriptPath ""$Description"" ""$SuspectsJson"" $CodeLensPath
 
     Write-Host "Bug tracing initiated based on description and suspect functions..."
 }
@@ -207,6 +207,6 @@ else{
     Write-Host "  codelens regenerate"
     Write-Host "  codelens commit"
     Write-Host "  codelens findbug {description_string} {suspect_functions_json}"
-    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" '[`"uploadImage`", `"handleImageInput`", `"sendToServer`"]'"
+    Write-Host "  Ex: codelens findbug "App crashes when uploading image" '["uploadImage", "handleImageInput", "sendToServer"]'"
     exit 1
 }

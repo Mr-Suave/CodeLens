@@ -4,7 +4,10 @@
     "version": "1.0",
     "description": "Overlay GitHub repos with extra tools.",
     "permissions": ["tabs", "scripting"],
-    "host_permissions": ["https://github.com/*"],
+    "host_permissions": [
+      "https://github.com/*",
+      "https://api.github.com/*"
+    ],
     "action": {
       "default_title": "CodeLens"
     },
@@ -18,4 +21,5 @@
         "css": ["styles.css"]
       }
     ]
+
   }
