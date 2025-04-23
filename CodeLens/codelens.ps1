@@ -74,7 +74,7 @@ function FindBug {
         exit 1
     }
 
-    $ScriptPath = Join-Path $CodeLensPath "draw_graph.py"
+    $ScriptPath = Join-Path $CodeLensPath "fixbug.py"
     if (-not (Test-Path $ScriptPath)) {
         Write-Host "Error: findbug.py not found at $ScriptPath"
         exit 1
