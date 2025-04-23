@@ -451,9 +451,6 @@ def main(description, suspects_json, repo_path):
     for suspect in suspects:
         queue.append((suspect, 0))
 
-    def extract_functions(func_names):
-        return {name: f"# Simulated code for {name}\ndef {name.split('::')[-1]}():\n    pass" for name in func_names}
-
     def analyze_with_llm(description, functions_code):
         model = genai.GenerativeModel("models/gemini-1.5-pro-002")
         results = []
