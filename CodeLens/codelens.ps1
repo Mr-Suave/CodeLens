@@ -139,11 +139,40 @@ elseif($Command -eq "commentify"){
 
     Write-Host "Commentify command completed!"
 }
+elseif ($Command -eq "drawgraph") {
+    # Get repo root
+    $RepoRoot = git rev-parse --show-toplevel 2>$null
+    if (-not $RepoRoot) {
+        Write-Host "Error: Cannot find GitHub repo."
+        exit 1
+    }
+
+    # Check for CODELENS_PATH environment variable
+    $CodeLensPath = $env:CODELENS_PATH
+    if (-not $CodeLensPath) {
+        Write-Host "Error: CODELENS_PATH environment variable not set"
+        exit 1
+    }
+
+    # Path to draw_graph.py
+    $GraphScript = Join-Path -Path $CodeLensPath -ChildPath "draw_graph.py"
+    if (-not (Test-Path $GraphScript)) {
+        Write-Host "Error: draw_graph.py not found at $GraphScript"
+        exit 1
+    }
+
+    # Run the Python graph drawing script
+    py $GraphScript $RepoRoot
+
+    Write-Host "Function call graph generation triggered!"
+}
+
 else{
     Write-Host "Usage:"
     Write-Host "  codelens generate {user_type}"
     Write-Host "  codelens commentify {file_path}"
     Write-Host "  codelens generate {user_type} {commit_hash}"
     Write-Host "  codelens regenerate"
+    Write-Host "  codelens drawgraph"
     exit 1
 }
