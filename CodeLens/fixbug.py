@@ -1,12 +1,14 @@
+import json
 import sys
 import os
 import ast
 import re
-from collections import defaultdict
+from collections import defaultdict, deque
 import networkx as nx
 import matplotlib.pyplot as plt
 import google.generativeai as genai
-
+GEMINI_API_KEY = "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
+genai.configure(api_key=GEMINI_API_KEY)
 # Directories to exclude from analysis
 EXCLUDED_DIRS = [
     'node_modules',
@@ -331,7 +333,7 @@ def parse_js_file(file_path):
     return functions, edges
 
 
-def main(repo_path):
+def main(description, suspects_json, repo_path):
     """Main function to parse a repository and generate a call graph."""
     graph = defaultdict(list)
     all_functions = set()
@@ -434,9 +436,85 @@ def main(repo_path):
     
     print("\nResults written to function_list.txt")
 
+    try:
+        suspects = json.loads(suspects_json)
+        if not isinstance(suspects, list):
+            raise ValueError("Suspects JSON is not a list")
+    except Exception as e:
+        print(f"❌ Error parsing suspects JSON: {e}")
+        sys.exit(1)
+
+    max_depth = 8
+    visited = set()
+    queue = deque()
+
+    for suspect in suspects:
+        queue.append((suspect, 0))
+
+    def extract_functions(func_names):
+        return {name: f"# Simulated code for {name}\ndef {name.split('::')[-1]}():\n    pass" for name in func_names}
+
+    def analyze_with_llm(description, functions_code):
+        model = genai.GenerativeModel("models/gemini-1.5-pro-002")
+        results = []
+
+        for fname, code in functions_code.items():
+            prompt = (
+                f"You are reviewing this function based on the following project description:\n"
+                f"{description}\n\n"
+                f"Please analyze the function below and determine if it is relevant to the described functionality:\n\n"
+                f"{code}\n\n"
+                f"Give a short score out of 100 and explain briefly why it's relevant or not."
+            )
+            try:
+                response = model.generate_content(prompt)
+                text = response.text.strip()
+                score_line = next((line for line in text.split('\n') if 'score' in line.lower()), "Score: N/A")
+                results.append((fname, f"{fname} - {score_line}", score_line))
+            except Exception as e:
+                results.append((fname, f"{fname} - Error calling Gemini: {e}", 0))
+
+    while queue:
+        frontier = []
+        current_depth = queue[0][1]
+        if current_depth >= max_depth:
+            print("\n Max depth reached.")
+            break
+
+        while queue and queue[0][1] == current_depth:
+            node, depth = queue.popleft()
+            if node in visited:
+                continue
+            visited.add(node)
+            for neighbor in graph.get(node, []):
+                if neighbor not in visited:
+                    frontier.append(neighbor)
+                    queue.append((neighbor, depth + 1))
+
+        if not frontier:
+            print("\nNo further levels to explore.")
+            break
+
+        print(f"\nLevel {current_depth+1} Frontier:")
+        func_code = extract_functions(frontier)
+        analysis = analyze_with_llm(description, func_code)
+
+        for _, line, _ in analysis:
+            print(f"  ➤ {line}")
+
+        ans = input("\nShall we continue? [y/n]: ").strip().lower()
+        if ans != 'y':
+            print("🛑 Stopping the analysis.")
+            break
+
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python draw_graph.py <repo_path>")
+    if len(sys.argv) != 4:
+        print("Usage: python draw_graph.py \"<Description>\" \"<SuspectsJson>\" <CodeLensPath>")
         sys.exit(1)
-    main(sys.argv[1])
+
+    description = sys.argv[1]
+    suspects_json = sys.argv[2]
+    repo_path = sys.argv[3]
+
+    main(description, suspects_json, repo_path)
