@@ -1,7 +1,7 @@
 param (
     [string]$Command,
     [string]$Arg1,
-    [string]$CommitNumber
+    [string]$Arg2
 )
 $ValidUserTypes = @("novice","senior","client")
 
@@ -23,7 +23,7 @@ function ShowRecentCommits{
 }
 
 function GenerateDocumentationFromCommit {
-    if (-not $CommitNumber) {
+    if (-not $Arg2) {
         Write-Host "Usage: codelens generate novice {commit_hash}"
         exit 1
     }
@@ -54,12 +54,39 @@ function GenerateDocumentationFromCommit {
         exit 1
     }
 
-    py $ScriptPath $CommitNumber $RepoRoot $Arg1 $CodeLensPath
+    py $ScriptPath $Arg2 $RepoRoot $Arg1 $CodeLensPath
 
-    Write-Host "Documentation generation triggered for commit $CommitNumber"
+    Write-Host "Documentation generation triggered for commit $Arg2"
 }
 
-if ($Command -eq "generate" -and $Arg1 -and $CommitNumber){
+function FindBug { 
+    $Description = $Arg1
+    $SuspectsJson = $Arg2
+
+    if(-not $Description -or -not $SuspectsJson){
+        Write-Host "Usage: codelens findbug {description_string} {suspect_functions_json}"
+        exit 1
+    }
+
+    $CodeLensPath = $env:CODELENS_PATH
+    if (-not $CodeLensPath) {
+        Write-Host "Error: CODELENS_PATH environment variable not set"
+        exit 1
+    }
+
+    $ScriptPath = Join-Path $CodeLensPath "draw_graph.py"
+    if (-not (Test-Path $ScriptPath)) {
+        Write-Host "Error: findbug.py not found at $ScriptPath"
+        exit 1
+    }
+
+    # Call Python script with bug description and suspects
+    py $ScriptPath "`"$Description`"" "`"$SuspectsJson`"" $CodeLensPath
+
+    Write-Host "Bug tracing initiated based on description and suspect functions..."
+}
+
+if ($Command -eq "generate" -and $Arg1 -and $Arg2){
     GenerateDocumentationFromCommit
 }
 elseif($Command -eq "generate"){
@@ -139,11 +166,16 @@ elseif($Command -eq "commentify"){
 
     Write-Host "Commentify command completed!"
 }
+elseif ($Command -eq "findbug") {
+    FindBug
+}
 else{
     Write-Host "Usage:"
     Write-Host "  codelens generate {user_type}"
     Write-Host "  codelens commentify {file_path}"
     Write-Host "  codelens generate {user_type} {commit_hash}"
     Write-Host "  codelens regenerate"
+    Write-Host "  codelens findbug {description_string} {suspect_functions_json}"
+    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" '[`"uploadImage`", `"handleImageInput`", `"sendToServer`"]'"
     exit 1
 }
