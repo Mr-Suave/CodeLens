@@ -30,9 +30,17 @@ code_documentation_generation_api.py::read_file
 commentify.py::chunk_code
 commentify.py::commentify_file
 commentify.py::generate_comments
+commit_msg_generation.py::extract_comments
+commit_msg_generation.py::generate_commit_message_from_prompt
+commit_msg_generation.py::get_git_diff
+commit_msg_generation.py::get_git_modified_and_untracked_files
+commit_msg_generation.py::main
+commit_msg_generation.py::read_file
 draw_graph.py::__init__
 draw_graph.py::clean_node_label
 draw_graph.py::draw_call_graph
+draw_graph.py::extract_function_code
+draw_graph.py::get_code_blocks_for_nodes
 draw_graph.py::get_source_files
 draw_graph.py::main
 draw_graph.py::parse_java_file
@@ -40,6 +48,20 @@ draw_graph.py::parse_js_file
 draw_graph.py::visit_AsyncFunctionDef
 draw_graph.py::visit_Call
 draw_graph.py::visit_FunctionDef
+fixbug.py::__init__
+fixbug.py::analyze_with_llm
+fixbug.py::clean_node_label
+fixbug.py::draw_call_graph
+fixbug.py::extract_function_code
+fixbug.py::get_code_blocks_for_nodes
+fixbug.py::get_source_files
+fixbug.py::main
+fixbug.py::parse_function_node
+fixbug.py::parse_java_file
+fixbug.py::parse_js_file
+fixbug.py::visit_AsyncFunctionDef
+fixbug.py::visit_Call
+fixbug.py::visit_FunctionDef
 script.py::extract_commit_messages
 script.py::extract_files
 script.py::extract_readme_file
@@ -50,9 +72,30 @@ track_commit_files.py::get_modified_files
 track_commit_files.py::get_untracked_files
 track_commit_files.py::main
 track_commit_files.py::write_file_content
+content.js::centerGraph
 content.js::createCodeLensButton
+content.js::createGraphHTML
+content.js::createSampleGraphData
+content.js::dragended
+content.js::dragged
+content.js::dragstarted
+content.js::exportSVG
+content.js::fetchFunctionList
+content.js::getNodeColor
+content.js::getRepoInfo
 content.js::handleOutsideClick
+content.js::hideTooltip
+content.js::highlightConnections
+content.js::initializeGraph
+content.js::initializeGraphInIframe
 content.js::isGitHubRepoPage
+content.js::parseAndPrepareFunctionList
+content.js::renderFunctionCallGraph
+content.js::searchNode
+content.js::setup
+content.js::showFunctionCallGraph
+content.js::showTooltip
+content.js::toggleLabels
 code_documentation_generation.py::check_and_pull_model
 code_documentation_generation.py::generate_documentation
 code_documentation_generation.py::json_to_markdown
@@ -110,6 +153,7 @@ code_documentation_generation_1.py::generate_documentation
 code_documentation_generation_1.py::read_file
 content.js::injectSidebar
 content.js::injectToggleButton
+install_hook.py::install_hook
 
 === FUNCTION CALL GRAPH ===
 content.js::addButton --> content.js::isRepoPage, content.js::cleanup, content.js::createElement, content.js::addEventListener, content.js::appendChild
@@ -143,15 +187,36 @@ code_documentation_generation_api.py::read_file --> code_documentation_generatio
 commentify.py::chunk_code --> commentify.py::append, commentify.py::join, commentify.py::append, commentify.py::append, commentify.py::join
 commentify.py::commentify_file --> commentify.py::exists, commentify.py::exit, commentify.py::readlines, commentify.py::chunk_code, commentify.py::generate_comments, commentify.py::append, commentify.py::strip, commentify.py::write, commentify.py::join
 commentify.py::generate_comments --> commentify.py::GenerativeModel, commentify.py::generate_content
+commit_msg_generation.py::extract_comments --> commit_msg_generation.py::findall
+commit_msg_generation.py::generate_commit_message_from_prompt --> commit_msg_generation.py::generate_content, commit_msg_generation.py::strip
+commit_msg_generation.py::get_git_diff --> commit_msg_generation.py::check_output
+commit_msg_generation.py::get_git_modified_and_untracked_files --> commit_msg_generation.py::check_output, commit_msg_generation.py::split, commit_msg_generation.py::strip, commit_msg_generation.py::split, commit_msg_generation.py::strip, commit_msg_generation.py::append
+commit_msg_generation.py::main --> commit_msg_generation.py::get_git_modified_and_untracked_files, commit_msg_generation.py::get_git_diff, commit_msg_generation.py::get, commit_msg_generation.py::splitext, commit_msg_generation.py::read_file, commit_msg_generation.py::extend, commit_msg_generation.py::extract_comments, commit_msg_generation.py::generate_commit_message_from_prompt, commit_msg_generation.py::join, commit_msg_generation.py::generate_commit_message_from_prompt
+commit_msg_generation.py::read_file --> commit_msg_generation.py::exists, commit_msg_generation.py::read
 draw_graph.py::clean_node_label --> draw_graph.py::split, draw_graph.py::basename
 draw_graph.py::draw_call_graph --> draw_graph.py::items, draw_graph.py::DiGraph, draw_graph.py::items, draw_graph.py::clean_node_label, draw_graph.py::clean_node_label, draw_graph.py::add_edge, draw_graph.py::nodes, draw_graph.py::edges, draw_graph.py::figure, draw_graph.py::spring_layout, draw_graph.py::draw, draw_graph.py::title, draw_graph.py::axis, draw_graph.py::tight_layout, draw_graph.py::savefig, draw_graph.py::close
+draw_graph.py::extract_function_code --> draw_graph.py::read, draw_graph.py::parse, draw_graph.py::join, draw_graph.py::splitlines
+draw_graph.py::get_code_blocks_for_nodes --> draw_graph.py::extract_function_code
 draw_graph.py::get_source_files --> draw_graph.py::walk, draw_graph.py::lower, draw_graph.py::join, draw_graph.py::endswith, draw_graph.py::walk, draw_graph.py::lower, draw_graph.py::join, draw_graph.py::endswith, draw_graph.py::join, draw_graph.py::match, draw_graph.py::getsize, draw_graph.py::append
-draw_graph.py::main --> draw_graph.py::defaultdict, draw_graph.py::join, draw_graph.py::get_source_files, draw_graph.py::basename, draw_graph.py::endswith, draw_graph.py::parse, draw_graph.py::read, draw_graph.py::PythonFunctionVisitor, draw_graph.py::visit, draw_graph.py::update, draw_graph.py::append, draw_graph.py::endswith, draw_graph.py::parse_java_file, draw_graph.py::update, draw_graph.py::append, draw_graph.py::endswith, draw_graph.py::parse_js_file, draw_graph.py::update, draw_graph.py::append, draw_graph.py::clean_node_label, draw_graph.py::items, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label, draw_graph.py::draw_call_graph, draw_graph.py::write, draw_graph.py::write, draw_graph.py::clean_node_label, draw_graph.py::write, draw_graph.py::write, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label
+draw_graph.py::main --> draw_graph.py::defaultdict, draw_graph.py::join, draw_graph.py::get_source_files, draw_graph.py::basename, draw_graph.py::endswith, draw_graph.py::read, draw_graph.py::parse, draw_graph.py::PythonFunctionVisitor, draw_graph.py::visit, draw_graph.py::update, draw_graph.py::append, draw_graph.py::extract_function_code, draw_graph.py::endswith, draw_graph.py::parse_java_file, draw_graph.py::update, draw_graph.py::append, draw_graph.py::get_code_blocks_for_nodes, draw_graph.py::update, draw_graph.py::endswith, draw_graph.py::parse_js_file, draw_graph.py::update, draw_graph.py::append, draw_graph.py::get_code_blocks_for_nodes, draw_graph.py::update, draw_graph.py::clean_node_label, draw_graph.py::items, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label, draw_graph.py::draw_call_graph, draw_graph.py::write, draw_graph.py::write, draw_graph.py::clean_node_label, draw_graph.py::write, draw_graph.py::write, draw_graph.py::clean_node_label, draw_graph.py::join, draw_graph.py::clean_node_label, draw_graph.py::items
 draw_graph.py::parse_java_file --> draw_graph.py::read, draw_graph.py::finditer, draw_graph.py::group, draw_graph.py::add, draw_graph.py::end, draw_graph.py::find, draw_graph.py::finditer, draw_graph.py::group, draw_graph.py::startswith, draw_graph.py::append
 draw_graph.py::parse_js_file --> draw_graph.py::read, draw_graph.py::split, draw_graph.py::finditer, draw_graph.py::group, draw_graph.py::add, draw_graph.py::append, draw_graph.py::start, draw_graph.py::end, draw_graph.py::sort, draw_graph.py::finditer, draw_graph.py::group, draw_graph.py::split, draw_graph.py::startswith, draw_graph.py::append
 draw_graph.py::visit_AsyncFunctionDef --> draw_graph.py::visit_FunctionDef
 draw_graph.py::visit_Call --> draw_graph.py::generic_visit, draw_graph.py::append, draw_graph.py::append, draw_graph.py::generic_visit
 draw_graph.py::visit_FunctionDef --> draw_graph.py::add, draw_graph.py::generic_visit
+fixbug.py::analyze_with_llm --> fixbug.py::GenerativeModel, fixbug.py::items, fixbug.py::clean_node_label, fixbug.py::append, fixbug.py::append, fixbug.py::generate_content, fixbug.py::strip, fixbug.py::split, fixbug.py::clean_node_label, fixbug.py::keys, fixbug.py::append, fixbug.py::append
+fixbug.py::clean_node_label --> fixbug.py::split, fixbug.py::basename
+fixbug.py::draw_call_graph --> fixbug.py::items, fixbug.py::DiGraph, fixbug.py::items, fixbug.py::clean_node_label, fixbug.py::clean_node_label, fixbug.py::add_edge, fixbug.py::nodes, fixbug.py::edges, fixbug.py::figure, fixbug.py::spring_layout, fixbug.py::draw, fixbug.py::title, fixbug.py::axis, fixbug.py::tight_layout, fixbug.py::savefig, fixbug.py::close
+fixbug.py::extract_function_code --> fixbug.py::read, fixbug.py::parse, fixbug.py::splitlines, fixbug.py::join, fixbug.py::splitlines
+fixbug.py::get_code_blocks_for_nodes --> fixbug.py::parse_function_node, fixbug.py::extract_function_code
+fixbug.py::get_source_files --> fixbug.py::walk, fixbug.py::lower, fixbug.py::join, fixbug.py::endswith, fixbug.py::walk, fixbug.py::lower, fixbug.py::join, fixbug.py::endswith, fixbug.py::join, fixbug.py::match, fixbug.py::getsize, fixbug.py::append
+fixbug.py::main --> fixbug.py::defaultdict, fixbug.py::join, fixbug.py::get_source_files, fixbug.py::basename, fixbug.py::endswith, fixbug.py::parse, fixbug.py::read, fixbug.py::PythonFunctionVisitor, fixbug.py::visit, fixbug.py::update, fixbug.py::update, fixbug.py::append, fixbug.py::endswith, fixbug.py::parse_java_file, fixbug.py::update, fixbug.py::update, fixbug.py::append, fixbug.py::endswith, fixbug.py::parse_js_file, fixbug.py::update, fixbug.py::update, fixbug.py::append, fixbug.py::clean_node_label, fixbug.py::items, fixbug.py::clean_node_label, fixbug.py::join, fixbug.py::clean_node_label, fixbug.py::clean_node_label, fixbug.py::join, fixbug.py::clean_node_label, fixbug.py::draw_call_graph, fixbug.py::write, fixbug.py::write, fixbug.py::clean_node_label, fixbug.py::write, fixbug.py::write, fixbug.py::clean_node_label, fixbug.py::join, fixbug.py::clean_node_label, fixbug.py::strip, fixbug.py::split, fixbug.py::clean_node_label, fixbug.py::clean_node_label, fixbug.py::append, fixbug.py::append, fixbug.py::clean_node_label, fixbug.py::clean_node_label, fixbug.py::deque, fixbug.py::append, fixbug.py::append, fixbug.py::add, fixbug.py::popleft, fixbug.py::append, fixbug.py::get, fixbug.py::append, fixbug.py::add, fixbug.py::clean_node_label, fixbug.py::analyze_with_llm, fixbug.py::clean_node_label, fixbug.py::lower, fixbug.py::strip
+fixbug.py::parse_function_node --> fixbug.py::split
+fixbug.py::parse_java_file --> fixbug.py::read, fixbug.py::finditer, fixbug.py::group, fixbug.py::add, fixbug.py::start, fixbug.py::find, fixbug.py::finditer, fixbug.py::group, fixbug.py::startswith, fixbug.py::append
+fixbug.py::parse_js_file --> fixbug.py::read, fixbug.py::split, fixbug.py::finditer, fixbug.py::group, fixbug.py::add, fixbug.py::append, fixbug.py::start, fixbug.py::end, fixbug.py::sort, fixbug.py::finditer, fixbug.py::group, fixbug.py::split, fixbug.py::startswith, fixbug.py::append
+fixbug.py::visit_AsyncFunctionDef --> fixbug.py::visit_FunctionDef
+fixbug.py::visit_Call --> fixbug.py::generic_visit, fixbug.py::append, fixbug.py::append, fixbug.py::generic_visit
+fixbug.py::visit_FunctionDef --> fixbug.py::add, fixbug.py::read, fixbug.py::splitlines, fixbug.py::join, fixbug.py::generic_visit
 script.py::extract_commit_messages --> script.py::replace, script.py::get, script.py::json, script.py::write, script.py::write, script.py::write, script.py::write
 script.py::extract_files --> script.py::run, script.py::splitlines, script.py::startswith
 script.py::extract_readme_file --> script.py::join, script.py::isfile, script.py::read, script.py::join, script.py::write
@@ -162,9 +227,27 @@ track_commit_files.py::get_modified_files --> track_commit_files.py::chdir, trac
 track_commit_files.py::get_untracked_files --> track_commit_files.py::chdir, track_commit_files.py::run, track_commit_files.py::splitlines, track_commit_files.py::strip
 track_commit_files.py::main --> track_commit_files.py::exit, track_commit_files.py::abspath, track_commit_files.py::join, track_commit_files.py::clear_output_folder, track_commit_files.py::get_modified_files, track_commit_files.py::get_untracked_files, track_commit_files.py::join, track_commit_files.py::isfile, track_commit_files.py::write_file_content, track_commit_files.py::join, track_commit_files.py::run
 track_commit_files.py::write_file_content --> track_commit_files.py::basename, track_commit_files.py::splitext, track_commit_files.py::read, track_commit_files.py::join, track_commit_files.py::write
-content.js::createCodeLensButton --> content.js::createElement, content.js::appendChild, content.js::createElement, content.js::createElement, content.js::appendChild, content.js::createElement, content.js::appendChild, content.js::createElement, content.js::createElement, content.js::appendChild, content.js::appendChild, content.js::appendChild
-content.js::handleOutsideClick --> content.js::getBoundingClientRect, content.js::remove, content.js::removeEventListener, content.js::addEventListener, content.js::isGitHubRepoPage, content.js::createCodeLensButton
+content.js::centerGraph --> content.js::translate, content.js::scale, content.js::call
+content.js::createCodeLensButton --> content.js::createElement, content.js::appendChild, content.js::createElement, content.js::createElement, content.js::appendChild, content.js::createElement, content.js::appendChild, content.js::createElement, content.js::createElement, content.js::addEventListener, content.js::appendChild, content.js::appendChild, content.js::appendChild
+content.js::createGraphHTML --> content.js::url, content.js::rgba, content.js::rgba, content.js::rgba, content.js::translate, content.js::addEventListener, content.js::function, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::getElementById, content.js::querySelector, content.js::getElementById, content.js::getElementById, content.js::setup, content.js::addEventListener, content.js::addEventListener, content.js::searchNode, content.js::addEventListener, content.js::transition, content.js::duration, content.js::call, content.js::addEventListener, content.js::transition, content.js::duration, content.js::call, content.js::addEventListener, content.js::addEventListener, content.js::addEventListener, content.js::function, content.js::initializeGraph
+content.js::dragended --> content.js::alphaTarget
+content.js::dragstarted --> content.js::alphaTarget, content.js::restart
+content.js::exportSVG --> content.js::createElementNS, content.js::setAttribute, content.js::setAttribute, content.js::setAttribute, content.js::node, content.js::cloneNode, content.js::appendChild, content.js::Blob, content.js::createObjectURL, content.js::createElement, content.js::appendChild, content.js::click, content.js::removeChild, content.js::isGitHubRepoPage, content.js::createCodeLensButton
+content.js::fetchFunctionList --> content.js::fetch, content.js::text, content.js::fetch, content.js::text, content.js::Error, content.js::catch
+content.js::getNodeColor --> content.js::filter
+content.js::getRepoInfo --> content.js::split, content.js::filter
+content.js::handleOutsideClick --> content.js::getBoundingClientRect, content.js::remove, content.js::removeEventListener, content.js::addEventListener
+content.js::highlightConnections --> content.js::style, content.js::style, content.js::select, content.js::style, content.js::style, content.js::select, content.js::style, content.js::style, content.js::Set, content.js::add, content.js::filter, content.js::style, content.js::style, content.js::each, content.js::function, content.js::add, content.js::filter, content.js::style, content.js::style, content.js::each, content.js::function, content.js::add, content.js::filter, content.js::has, content.js::select, content.js::style, content.js::style, content.js::showTooltip
+content.js::initializeGraph --> content.js::getElementById, content.js::getElementById, content.js::warn, content.js::large, content.js::Map, content.js::set, content.js::get, content.js::set, content.js::get, content.js::sort, content.js::get, content.js::get, content.js::slice, content.js::Set, content.js::map, content.js::filter, content.js::has, content.js::has, content.js::warn, content.js::edges, content.js::slice, content.js::id, content.js::distance, content.js::strength, content.js::strength, content.js::strength, content.js::append, content.js::attr, content.js::selectAll, content.js::data, content.js::enter, content.js::append, content.js::attr, content.js::append, content.js::attr
+content.js::initializeGraphInIframe --> content.js::initializeGraphWithData
 content.js::isGitHubRepoPage --> content.js::test
+content.js::parseAndPrepareFunctionList --> content.js::Map, content.js::split, content.js::includes, content.js::includes, content.js::split, content.js::map, content.js::trim, content.js::has, content.js::set, content.js::split, content.js::map, content.js::trim, content.js::includes, content.js::has, content.js::set, content.js::push, content.js::from, content.js::values
+content.js::renderFunctionCallGraph --> content.js::createElement, content.js::appendChild, content.js::parseAndPrepareFunctionList, content.js::initializeGraphInIframe, content.js::createSampleGraphData, content.js::initializeGraphInIframe, content.js::createGraphHTML, content.js::Blob, content.js::createObjectURL
+content.js::searchNode --> content.js::getElementById, content.js::toLowerCase, content.js::filter, content.js::toLowerCase, content.js::includes, content.js::translate, content.js::scale, content.js::transition, content.js::duration, content.js::call, content.js::selectAll, content.js::style, content.js::style, content.js::selectAll, content.js::filter, content.js::select, content.js::style, content.js::style, content.js::alert
+content.js::setup --> content.js::select, content.js::append, content.js::attr, content.js::attr, content.js::append, content.js::append, content.js::attr, content.js::attr, content.js::attr, content.js::attr, content.js::attr, content.js::attr, content.js::attr, content.js::append, content.js::attr, content.js::attr, content.js::append, content.js::zoom, content.js::scaleExtent, content.js::on, content.js::attr, content.js::call
+content.js::showFunctionCallGraph --> content.js::getRepoInfo, content.js::alert, content.js::getElementById, content.js::remove, content.js::createElement, content.js::rgba, content.js::appendChild, content.js::createElement, content.js::remove, content.js::appendChild, content.js::createElement, content.js::appendChild, content.js::fetchFunctionList, content.js::then, content.js::renderFunctionCallGraph, content.js::catch, content.js::error, content.js::appendChild, content.js::createElement, content.js::appendChild
+content.js::showTooltip --> content.js::filter, content.js::filter
+content.js::toggleLabels --> content.js::selectAll, content.js::style
 code_documentation_generation.py::check_and_pull_model --> code_documentation_generation.py::read, code_documentation_generation.py::popen, code_documentation_generation.py::system
 code_documentation_generation.py::generate_documentation --> code_documentation_generation.py::exists, code_documentation_generation.py::check_and_pull_model, code_documentation_generation.py::load_json, code_documentation_generation.py::read_file, code_documentation_generation.py::join, code_documentation_generation.py::read_file, code_documentation_generation.py::join, code_documentation_generation.py::listdir, code_documentation_generation.py::endswith, code_documentation_generation.py::splitext, code_documentation_generation.py::join, code_documentation_generation.py::read_file, code_documentation_generation.py::dumps, code_documentation_generation.py::dumps, code_documentation_generation.py::get, code_documentation_generation.py::time, code_documentation_generation.py::generate, code_documentation_generation.py::time, code_documentation_generation.py::loads, code_documentation_generation.py::strip, code_documentation_generation.py::update, code_documentation_generation.py::save_json, code_documentation_generation.py::json_to_markdown, code_documentation_generation.py::write
 code_documentation_generation.py::json_to_markdown --> code_documentation_generation.py::items, code_documentation_generation.py::items
@@ -209,3 +292,4 @@ code_documentation_generation_1.py::generate_documentation --> code_documentatio
 code_documentation_generation_1.py::read_file --> code_documentation_generation_1.py::read
 content.js::injectSidebar --> content.js::createElement, content.js::appendChild, content.js::setTimeout, content.js::add, content.js::getElementById, content.js::addEventListener, content.js::remove, content.js::setTimeout, content.js::remove, content.js::addEventListener, content.js::setTimeout
 content.js::injectToggleButton --> content.js::querySelector, content.js::createElement, content.js::appendChild, content.js::addEventListener, content.js::getElementById, content.js::remove, content.js::setTimeout, content.js::remove, content.js::injectSidebar
+install_hook.py::install_hook --> install_hook.py::join, install_hook.py::isdir, install_hook.py::exit, install_hook.py::abspath, install_hook.py::dirname, install_hook.py::join, install_hook.py::exists, install_hook.py::exit, install_hook.py::write, install_hook.py::format, install_hook.py::stat, install_hook.py::chmod
