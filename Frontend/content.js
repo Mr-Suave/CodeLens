@@ -1,4 +1,3 @@
-/* content.js */
 function isGitHubRepoPage() {
   return /^https:\/\/github\.com\/[^\/]+\/[^\/]+(\/)?$/.test(window.location.href);
 }
@@ -14,6 +13,61 @@ function getRepoInfo() {
   return null;
 }
 
+// Reusable outside click handler for overlays
+function handleOutsideClick(e, container, button) {
+  const rect = container.getBoundingClientRect();
+  if (
+    e.clientX < rect.left ||
+    e.clientX > rect.right ||
+    e.clientY < rect.top ||
+    e.clientY > rect.bottom
+  ) {
+    container.remove();
+    // Do not show the button again
+    document.removeEventListener('click', handleOutsideClick);
+  }
+}
+
+// Reusable outside click handler for graph container
+function handleGraphOutsideClick(e, container, button) {
+  const rect = container.getBoundingClientRect();
+  const iframe = container.querySelector('iframe');
+  if (iframe && iframe.contains(e.target)) {
+    return;
+  }
+  if (
+    e.clientX < rect.left ||
+    e.clientX > rect.right ||
+    e.clientY < rect.top ||
+    e.clientY > rect.bottom
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    container.remove();
+    // Do not show the button or reopen the overlay
+    document.removeEventListener('click', handleGraphOutsideClick);
+  }
+}
+
+// Reusable outside click handler for the CodeLens button
+function handleButtonOutsideClick(e, button) {
+  const rect = button.getBoundingClientRect();
+  const overlay = document.getElementById('codelens-overlay');
+  const graphContainer = document.getElementById('codelens-graph-container');
+  // Only proceed if neither overlay nor graph is present
+  if (!overlay && !graphContainer) {
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      button.remove();
+      document.removeEventListener('click', handleButtonOutsideClick);
+    }
+  }
+}
+
 function createCodeLensButton() {
   const button = document.createElement('div');
   button.id = 'codelens-btn';
@@ -23,6 +77,7 @@ function createCodeLensButton() {
   button.onclick = () => {
     const overlay = document.createElement('div');
     overlay.id = 'codelens-overlay';
+    // Hide the CodeLens button permanently
     button.style.display = 'none';
 
     const title = document.createElement('h2');
@@ -39,17 +94,17 @@ function createCodeLensButton() {
     const docBtn = document.createElement('button');
     docBtn.className = 'overlay-btn';
     docBtn.innerText = 'View Documentation For the Repository';
-    docBtn.addEventListener('click', () => {
-      // Placeholder for documentation function
-      // alert('Documentation button clicked!');
-    });
-    overlay.appendChild(docBtn);
+    docBtn.addEventListener('click', showAudienceSelection); // Added event listener
 
     // Second Button: Commit Messages Graph
     const graphBtn = document.createElement('button');
     graphBtn.className = 'overlay-btn';
     graphBtn.innerText = 'View Commit Messages Graph';
-    graphBtn.addEventListener('click', showFunctionCallGraph); // Assuming this function exists
+    
+    // Add event listener for the graph button
+    graphBtn.addEventListener('click', showFunctionCallGraph);
+
+    overlay.appendChild(docBtn);
     overlay.appendChild(graphBtn);
 
     // Third Button: Commit History Graph (with overlay image)
@@ -100,39 +155,259 @@ function createCodeLensButton() {
 
     document.body.appendChild(overlay);
 
-    // Close overlay when clicking outside the overlay
-    function handleOutsideClick(e) {
-      if (!overlay.contains(e.target) && !e.target.closest('#image-overlay')) {
-        overlay.remove();
-        button.style.display = 'block';
-        document.removeEventListener('click', handleOutsideClick);
+    // Add outside click handler for overlay
+    setTimeout(() => {
+      document.addEventListener('click', (e) => handleOutsideClick(e, overlay, button));
+    }, 100);
+  };
+
+  // Add outside click handler for button
+  setTimeout(() => {
+    document.addEventListener('click', (e) => handleButtonOutsideClick(e, button));
+  }, 100);
+}
+
+const USER_DOCUMENTATION_FILES = {
+  "Novice developer": "Documentation_novice.md",
+  "Client": "Documentation_client.md",
+  "Senior developer": "Documentation_senior.md"
+};
+
+function showAudienceSelection() {
+  const oldOverlay = document.getElementById('codelens-overlay');
+  if (oldOverlay) {
+    oldOverlay.remove();
+  }
+  
+  const audienceOverlay = document.createElement('div');
+  audienceOverlay.id = 'codelens-overlay';
+  
+  const title = document.createElement('h2');
+  title.className = 'codelens-title';
+  title.innerText = 'CodeLens';
+  audienceOverlay.appendChild(title);
+  
+  const audienceHeading = document.createElement('h3');
+  audienceHeading.className = 'codelens-subtitle';
+  audienceHeading.innerText = 'Whom do you want to generate the document for?';
+  audienceOverlay.appendChild(audienceHeading);
+  
+  const btnContainer = document.createElement('div');
+  btnContainer.className = 'button-container';
+  btnContainer.style.display = 'flex';
+  btnContainer.style.gap = '10px';
+  
+  const audiences = ['Novice developer', 'Client', 'Senior developer'];
+  let selectedAudience = null;
+  
+  audiences.forEach(audience => {
+    const audienceBtn = document.createElement('button');
+    audienceBtn.className = 'overlay-btn';
+    audienceBtn.innerText = audience;
+    audienceBtn.style.fontSize = '16px';
+    
+    audienceBtn.addEventListener('click', () => {
+      document.querySelectorAll('.overlay-btn').forEach(btn => {
+        btn.classList.remove('active-btn');
+      });
+      
+      audienceBtn.classList.add('active-btn');
+      selectedAudience = audience;
+      
+      if (!document.getElementById('find-doc-btn')) {
+        const findDocBtn = document.createElement('button');
+        findDocBtn.id = 'find-doc-btn';
+        findDocBtn.className = 'overlay-btn find-btn';
+        findDocBtn.innerText = 'Find Documentation';
+        
+        findDocBtn.addEventListener('click', () => {
+          findDocumentationForAudience(selectedAudience);
+        });
+        
+        audienceOverlay.appendChild(findDocBtn);
       }
+    });
+    
+    btnContainer.appendChild(audienceBtn);
+  });
+  
+  audienceOverlay.appendChild(btnContainer);
+  document.body.appendChild(audienceOverlay);
+  
+  const backButton = document.createElement('button');
+  backButton.className = 'back-btn';
+  backButton.innerText = '← Back';
+  backButton.addEventListener('click', () => {
+    audienceOverlay.remove();
+    // Do not show the CodeLens button
+  });
+  audienceOverlay.appendChild(backButton);
+  
+  // Add outside click handler
+  setTimeout(() => {
+    document.addEventListener('click', (e) => handleOutsideClick(e, audienceOverlay, document.getElementById('codelens-btn')));
+  }, 100);
+}
+
+async function findDocumentationForAudience(audience) {
+  const repoInfo = getRepoInfo();
+  if (!repoInfo) {
+    showError('Could not determine repository information.');
+    return;
+  }
+
+  const fileName = USER_DOCUMENTATION_FILES[audience];
+  const overlay = document.getElementById('codelens-overlay');
+  if (!overlay) return;
+
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'loading-message';
+  loadingMsg.innerText = `Searching for ${fileName}...`;
+  overlay.appendChild(loadingMsg);
+
+  try {
+    const defaultBranch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
+    const fileInfo = await searchDirectoryForFile(repoInfo.owner, repoInfo.repo, defaultBranch, "", fileName);
+    
+    if (!fileInfo) {
+      throw new Error(`Documentation file ${fileName} not found in the repository.`);
     }
 
-    // Use capture to catch clicks before they propagate to overlay buttons
-    setTimeout(() => {
-      document.addEventListener('click', handleOutsideClick, true);
-    }, 0);
+    const content = await fetchFileContent(fileInfo.download_url);
+    loadingMsg.remove();
+
+    const docContent = document.createElement('div');
+    docContent.className = 'doc-content';
+    docContent.style.padding = '20px';
+    docContent.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+    docContent.style.border = '2px solid #e0e0e0';
+    docContent.style.borderRadius = '10px';
+    docContent.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+    docContent.style.maxHeight = '70vh';
+    docContent.style.overflow = 'auto';
+    docContent.style.fontFamily = "'Georgia', serif";
+
+    const pathInfo = document.createElement('p');
+    pathInfo.innerText = `Source: ${content.path}`;
+    pathInfo.style.fontWeight = 'bold';
+    pathInfo.style.color = '#ffffff';
+    pathInfo.style.margin = '0 0 15px 0';
+    docContent.appendChild(pathInfo);
+
+    const formattedContent = document.createElement('div');
+    formattedContent.className = 'markdown-content';
+    formattedContent.style.lineHeight = '1.8';
+    formattedContent.style.color = '#ffffff';
+
+    const markdownText = content.content;
+    const formattedHtml = markdownToHtml(markdownText);
+    formattedContent.innerHTML = formattedHtml;
+
+    docContent.appendChild(formattedContent);
+    overlay.appendChild(docContent);
+  } catch (error) {
+    loadingMsg.remove();
+    showError(error.message);
+  }
+}
+
+function markdownToHtml(markdown) {
+  let html = markdown
+    .replace(/^# (.+)$/gm, '<h1 style="color:#ffffff;font-size:28px;border-bottom:3px solid #3498db;padding-bottom:10px;margin:20px 0;">$1</h1>')
+    .replace(/^## (.+)$/gm, '<h2 style="color:#ffffff;font-size:24px;border-bottom:2px solid #27ae60;padding-bottom:8px;margin:18px 0;">$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3 style="color:#ffffff;font-size:20px;border-bottom:1px solid #c0392b;padding-bottom:6px;margin:15px 0;">$1</h3>')
+    .replace(/^#### (.+)$/gm, '<h4 style="color:#ffffff;font-size:18px;margin:15px 0;">$1</h4>')
+    
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#ffffff;">$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em style="color:#ffffff;">$1</em>')
+    
+    .replace(/```([^`]+)```/g, '<pre style="background-color:#f9f9f9;padding:15px;border-left:4px solid #3498db;border-radius:5px;overflow:auto;"><code style="color:#2c3e50;">$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code style="background-color:#ecf0f1;padding:2px 6px;border-radius:3px;color:#7f8c8d;">$1</code>')
+    
+    .replace(/^- (.+)$/gm, '<li style="color:#ffffff;margin-bottom:10px;">$1</li>')
+    
+    .replace(/\n\n/g, '<br><br>');
+
+  html = html.replace(/<li[^>]*>(.+?)(?=<li|$)/gs, function(match) {
+    return '<ul style="margin:15px 0 15px 25px;list-style-type:square;">' + match + '</ul>';
+  });
+
+  return html;
+}
+
+async function fetchDefaultBranch(owner, repo) {
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch repository info: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.default_branch || 'main';
+}
+
+async function searchDirectoryForFile(owner, repo, branch, path, fileName) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch directory contents: ${response.status}`);
+  }
+  const items = await response.json();
+
+  const foundFile = items.find(item => 
+    item.type === 'file' && item.name.toLowerCase() === fileName.toLowerCase()
+  );
+  if (foundFile) {
+    return foundFile;
+  }
+
+  const subDirPromises = items
+    .filter(item => item.type === 'dir')
+    .map(dir => {
+      const newPath = path ? `${path}/${dir.name}` : dir.name;
+      return searchDirectoryForFile(owner, repo, branch, newPath, fileName);
+    });
+
+  const results = await Promise.all(subDirPromises);
+  return results.find(result => result !== null) || null;
+}
+
+async function fetchFileContent(downloadUrl) {
+  const response = await fetch(downloadUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch file content: ${response.status}`);
+  }
+  const content = await response.text();
+  return {
+    content,
+    path: downloadUrl.split('/').slice(-2).join('/')
   };
 }
 
-
+function showError(message) {
+  const overlay = document.getElementById('codelens-overlay');
+  if (overlay) {
+    const errorMsg = document.createElement('div');
+    errorMsg.className = 'error-message';
+    errorMsg.style.color = 'red';
+    errorMsg.style.padding = '10px';
+    errorMsg.innerText = `Error: ${message}`;
+    overlay.appendChild(errorMsg);
+  }
+}
 
 function showFunctionCallGraph() {
-  // Get repository information
   const repoInfo = getRepoInfo();
   if (!repoInfo) {
     alert('Could not determine repository information.');
     return;
   }
 
-  // Remove existing graph container if present
+  const codeLensButton = document.getElementById('codelens-btn');
+
   let graphContainer = document.getElementById('codelens-graph-container');
   if (graphContainer) {
     graphContainer.remove();
   }
 
-  // Create a new container for the graph
   graphContainer = document.createElement('div');
   graphContainer.id = 'codelens-graph-container';
   graphContainer.style.position = 'fixed';
@@ -147,7 +422,6 @@ function showFunctionCallGraph() {
   
   document.body.appendChild(graphContainer);
 
-  // Add a close button
   const closeButton = document.createElement('div');
   closeButton.style.position = 'absolute';
   closeButton.style.top = '20px';
@@ -158,10 +432,30 @@ function showFunctionCallGraph() {
   closeButton.innerText = '✕';
   closeButton.onclick = () => {
     graphContainer.remove();
+    // Do not show the CodeLens button
+    document.removeEventListener('click', handleGraphOutsideClick);
   };
   graphContainer.appendChild(closeButton);
+  
+  const backButton = document.createElement('div');
+  backButton.style.position = 'absolute';
+  backButton.style.top = '20px';
+  backButton.style.left = '20px';
+  backButton.style.color = 'white';
+  backButton.style.backgroundColor = '#555';
+  backButton.style.padding = '8px 12px';
+  backButton.style.borderRadius = '4px';
+  backButton.style.cursor = 'pointer';
+  backButton.style.fontSize = '14px';
+  backButton.style.fontWeight = 'bold';
+  backButton.innerText = '← Back';
+  backButton.onclick = () => {
+    graphContainer.remove();
+    // Do not show the CodeLens button or reopen the overlay
+    document.removeEventListener('click', handleGraphOutsideClick);
+  };
+  graphContainer.appendChild(backButton);
 
-  // Add loading indicator
   const loadingIndicator = document.createElement('div');
   loadingIndicator.style.color = 'white';
   loadingIndicator.style.textAlign = 'center';
@@ -169,17 +463,20 @@ function showFunctionCallGraph() {
   loadingIndicator.innerText = 'Searching for function_list.txt in repository...';
   graphContainer.appendChild(loadingIndicator);
 
-  // Try to find function_list.txt in the repository
+  // Add outside click handler with delay
+  setTimeout(() => {
+    document.addEventListener('click', (e) => handleGraphOutsideClick(e, graphContainer, codeLensButton));
+  }, 100);
+
   fetchFunctionList(repoInfo)
     .then(functionListContent => {
-      // If we got the function list, render the graph
       renderFunctionCallGraph(graphContainer, functionListContent);
     })
     .catch(error => {
-      // If we couldn't find the function list, show error message
       console.error('Error fetching function list:', error);
-      graphContainer.innerHTML = ''; // Clear loading indicator
+      graphContainer.innerHTML = '';
       graphContainer.appendChild(closeButton);
+      graphContainer.appendChild(backButton);
       
       const errorMessage = document.createElement('div');
       errorMessage.style.color = 'white';
@@ -196,8 +493,7 @@ function showFunctionCallGraph() {
 }
 
 async function fetchFunctionList(repoInfo) {
-  // First, try to fetch function_list.txt from the root of the repo
-  const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/function_list.txt`;
+  const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/dil/main/function_list.txt`;
   
   try {
     const response = await fetch(url);
@@ -205,7 +501,6 @@ async function fetchFunctionList(repoInfo) {
       return await response.text();
     }
     
-    // If not found in main branch, try master branch
     const masterUrl = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/master/function_list.txt`;
     const masterResponse = await fetch(masterUrl);
     if (masterResponse.ok) {
@@ -219,10 +514,8 @@ async function fetchFunctionList(repoInfo) {
 }
 
 function renderFunctionCallGraph(container, functionListContent) {
-  // Clear container content
   container.innerHTML = '';
   
-  // Create the iframe for the graph
   const graphFrame = document.createElement('iframe');
   graphFrame.id = 'function-graph-frame';
   graphFrame.style.width = '100%';
@@ -230,22 +523,18 @@ function renderFunctionCallGraph(container, functionListContent) {
   graphFrame.style.border = 'none';
   container.appendChild(graphFrame);
   
-  // When the iframe loads, initialize the D3 graph
   graphFrame.onload = () => {
     const doc = graphFrame.contentDocument || graphFrame.contentWindow.document;
     
-    // Initialize the graph with the fetched function list or sample data
     if (functionListContent) {
       const graphData = parseAndPrepareFunctionList(functionListContent);
       initializeGraphInIframe(doc, graphData);
     } else {
-      // Use sample data
       const sampleData = createSampleGraphData();
       initializeGraphInIframe(doc, sampleData);
     }
   };
   
-  // Set the content of the iframe
   const graphHTML = createGraphHTML();
   const blob = new Blob([graphHTML], { type: 'text/html' });
   graphFrame.src = URL.createObjectURL(blob);
@@ -312,8 +601,6 @@ function createSampleGraphData() {
 }
 
 function initializeGraphInIframe(doc, graphData) {
-  // This function will be called after the iframe loads
-  // It passes the graph data to the iframe context to initialize the visualization
   const iframe = doc.defaultView || doc.parentWindow;
   if (iframe && iframe.initializeGraphWithData) {
     iframe.initializeGraphWithData(graphData);
@@ -321,8 +608,6 @@ function initializeGraphInIframe(doc, graphData) {
 }
 
 function createGraphHTML() {
-  // This returns the HTML content for the iframe, based on the graph.html file
-  // but modified to accept data from the parent page
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -444,7 +729,6 @@ function createGraphHTML() {
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script>
-        // Global variables
         let container, svg, g, zoom;
         let nodes = [];
         let links = [];
@@ -452,51 +736,51 @@ function createGraphHTML() {
         let showLabels = true;
         
         document.addEventListener('DOMContentLoaded', function() {
-            // DOM elements
-            container = document.getElementById('container');
-            const searchInput = document.getElementById('search');
-            const searchBtn = document.getElementById('search-btn');
-            const zoomInBtn = document.getElementById('zoom-in');
-            const zoomOutBtn = document.getElementById('zoom-out');
-            const resetBtn = document.getElementById('reset');
-            const toggleLabelsBtn = document.getElementById('toggle-labels');
-            const exportSvgBtn = document.getElementById('export-svg');
-            const loadingIndicator = document.getElementById('loading');
-            const tooltip = document.querySelector('.tooltip');
-            const nodeCountSpan = document.getElementById('node-count');
-            const edgeCountSpan = document.getElementById('edge-count');
-            
-            setup();
-            
-            // Event listeners
-            searchBtn.addEventListener('click', searchNode);
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') searchNode();
-            });
-            
-            zoomInBtn.addEventListener('click', () => {
-                svg.transition().duration(300).call(zoom.scaleBy, 1.3);
-            });
-            
-            zoomOutBtn.addEventListener('click', () => {
-                svg.transition().duration(300).call(zoom.scaleBy, 0.7);
-            });
-            
-            resetBtn.addEventListener('click', centerGraph);
-            
-            toggleLabelsBtn.addEventListener('click', toggleLabels);
-            
-            exportSvgBtn.addEventListener('click', exportSVG);
-            
-            // Expose function to parent window
-            window.initializeGraphWithData = function(graphData) {
-                initializeGraph(graphData);
-                loadingIndicator.style.display = 'none';
-            };
+            try {
+                container = document.getElementById('container');
+                const searchInput = document.getElementById('search');
+                const searchBtn = document.getElementById('search-btn');
+                const zoomInBtn = document.getElementById('zoom-in');
+                const zoomOutBtn = document.getElementById('zoom-out');
+                const resetBtn = document.getElementById('reset');
+                const toggleLabelsBtn = document.getElementById('toggle-labels');
+                const exportSvgBtn = document.getElementById('export-svg');
+                const loadingIndicator = document.getElementById('loading');
+                const tooltip = document.querySelector('.tooltip');
+                const nodeCountSpan = document.getElementById('node-count');
+                const edgeCountSpan = document.getElementById('edge-count');
+                
+                setup();
+                
+                searchBtn.addEventListener('click', searchNode);
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') searchNode();
+                });
+                
+                zoomInBtn.addEventListener('click', function() {
+                    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+                });
+                
+                zoomOutBtn.addEventListener('click', function() {
+                    svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+                });
+                
+                resetBtn.addEventListener('click', centerGraph);
+                
+                toggleLabelsBtn.addEventListener('click', toggleLabels);
+                
+                exportSvgBtn.addEventListener('click', exportSVG);
+                
+                window.initializeGraphWithData = function(graphData) {
+                    initializeGraph(graphData);
+                    loadingIndicator.style.display = 'none';
+                };
+            } catch (error) {
+                console.error('Error initializing graph:', error);
+            }
         });
         
         function setup() {
-            // SVG setup
             const width = container.offsetWidth;
             const height = container.offsetHeight;
             
@@ -504,7 +788,6 @@ function createGraphHTML() {
                 .attr('width', width)
                 .attr('height', height);
             
-            // Add arrow marker for edges
             svg.append('defs').append('marker')
                 .attr('id', 'arrow')
                 .attr('viewBox', '0 -5 10 10')
@@ -517,226 +800,200 @@ function createGraphHTML() {
                 .attr('d', 'M0,-5L10,0L0,5')
                 .attr('fill', '#999');
             
-            // Create a group for the graph
             g = svg.append('g');
             
-            // Setup zoom behavior
             zoom = d3.zoom()
                 .scaleExtent([0.1, 8])
-                .on('zoom', (event) => {
+                .on('zoom', function(event) {
                     g.attr('transform', event.transform);
                 });
             
             svg.call(zoom);
         }
         
-        // Initialize the visualization
         function initializeGraph(graphData) {
-            const width = container.offsetWidth;
-            const height = container.offsetHeight;
-            
-            // Update counters
-            document.getElementById('node-count').textContent = graphData.nodes.length;
-            document.getElementById('edge-count').textContent = graphData.links.length;
-            
-            nodes = graphData.nodes;
-            links = graphData.links;
-            
-            // Limit nodes and links if too many
-            if (nodes.length > 500) {
-                console.warn('Graph is very large (\${nodes.length} nodes). Limiting to 500 nodes.');
-                // Find nodes with connections first
-                const nodeUsageCounts = new Map();
-                links.forEach(link => {
-                    nodeUsageCounts.set(link.source, (nodeUsageCounts.get(link.source) || 0) + 1);
-                    nodeUsageCounts.set(link.target, (nodeUsageCounts.get(link.target) || 0) + 1);
+            try {
+                const width = container.offsetWidth;
+                const height = container.offsetHeight;
+                
+                document.getElementById('node-count').textContent = graphData.nodes.length;
+                document.getElementById('edge-count').textContent = graphData.links.length;
+                
+                nodes = graphData.nodes;
+                links = graphData.links;
+                
+                if (nodes.length > 500) {
+                    console.warn('Graph is very large (' + nodes.length + ' nodes). Limiting to 500 nodes.');
+                    const nodeUsageCounts = new Map();
+                    links.forEach(function(link) {
+                        nodeUsageCounts.set(link.source, (nodeUsageCounts.get(link.source) || 0) + 1);
+                        nodeUsageCounts.set(link.target, (nodeUsageCounts.get(link.target) || 0) + 1);
+                    });
+                    
+                    const sortedNodes = nodes.slice().sort(function(a, b) {
+                        const countA = nodeUsageCounts.get(a.id) || 0;
+                        const countB = nodeUsageCounts.get(b.id) || 0;
+                        return countB - countA;
+                    });
+                    
+                    nodes = sortedNodes.slice(0, 500);
+                    const keepNodeIds = new Set(nodes.map(function(n) { return n.id; }));
+                    
+                    links = links.filter(function(link) {
+                        return keepNodeIds.has(typeof link.source === 'object' ? link.source.id : link.source) &&
+                               keepNodeIds.has(typeof link.target === 'object' ? link.target.id : link.target);
+                    });
+                }
+                
+                if (links.length > 1000) {
+                    console.warn('Too many edges (' + links.length + '). Limiting to 1000 edges.');
+                    links = links.slice(0, 1000);
+                }
+                
+                simulation = d3.forceSimulation(nodes)
+                    .force('link', d3.forceLink(links).id(function(d) { return d.id; }).distance(100))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('x', d3.forceX(width / 2).strength(0.1))
+                    .force('y', d3.forceY(height / 2).strength(0.1));
+                
+                const link = g.append('g')
+                    .attr('class', 'links')
+                    .selectAll('line')
+                    .data(links)
+                    .enter()
+                    .append('line')
+                    .attr('class', 'link');
+                
+                const node = g.append('g')
+                    .attr('class', 'nodes')
+                    .selectAll('g')
+                    .data(nodes)
+                    .enter()
+                    .append('g')
+                    .attr('class', 'node')
+                    .call(d3.drag()
+                        .on('start', dragstarted)
+                        .on('drag', dragged)
+                        .on('end', dragended));
+                
+                node.append('circle')
+                    .attr('r', 5)
+                    .attr('fill', getNodeColor)
+                    .on('mouseover', showTooltip)
+                    .on('mouseout', hideTooltip)
+                    .on('click', highlightConnections);
+                
+                const labels = node.append('text')
+                    .attr('dx', 8)
+                    .attr('dy', '.35em')
+                    .text(function(d) {
+                        const label = d.label;
+                        if (label.length > 25) {
+                            return label.substring(0, 22) + '...';
+                        }
+                        return label;
+                    })
+                    .style('display', showLabels ? 'block' : 'none');
+                
+                simulation.on('tick', function() {
+                    link
+                        .attr('x1', function(d) { return d.source.x; })
+                        .attr('y1', function(d) { return d.source.y; })
+                        .attr('x2', function(d) { return d.target.x; })
+                        .attr('y2', function(d) { return d.target.y; });
+                    
+                    node
+                        .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
                 });
                 
-                // Sort nodes by usage count
-                const sortedNodes = [...nodes].sort((a, b) => {
-                    const countA = nodeUsageCounts.get(a.id) || 0;
-                    const countB = nodeUsageCounts.get(b.id) || 0;
-                    return countB - countA;
-                });
+                centerGraph();
                 
-                nodes = sortedNodes.slice(0, 500);
-                const keepNodeIds = new Set(nodes.map(n => n.id));
+                function getNodeColor(d) {
+                    const outgoingCount = links.filter(function(l) {
+                        return (typeof l.source === 'object' ? l.source.id : l.source) === d.id;
+                    }).length;
+                    
+                    if (outgoingCount > 10) return '#e41a1c';
+                    if (outgoingCount > 5) return '#ff7f00';
+                    if (outgoingCount > 0) return '#4daf4a';
+                    return '#377eb8';
+                }
                 
-                // Filter links to only include the kept nodes
-                links = links.filter(link => 
-                    keepNodeIds.has(typeof link.source === 'object' ? link.source.id : link.source) && 
-                    keepNodeIds.has(typeof link.target === 'object' ? link.target.id : link.target)
-                );
-            }
-            
-            if (links.length > 1000) {
-                console.warn('Too many edges (\${links.length}). Limiting to 1000 edges.');
-                links = links.slice(0, 1000);
-            }
-            
-            // Create force simulation
-            simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-                .force('charge', d3.forceManyBody().strength(-300))
-                .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('x', d3.forceX(width / 2).strength(0.1))
-                .force('y', d3.forceY(height / 2).strength(0.1));
-            
-            // Draw links
-            const link = g.append('g')
-                .attr('class', 'links')
-                .selectAll('line')
-                .data(links)
-                .enter()
-                .append('line')
-                .attr('class', 'link');
-            
-            // Draw nodes
-            const node = g.append('g')
-                .attr('class', 'nodes')
-                .selectAll('g')
-                .data(nodes)
-                .enter()
-                .append('g')
-                .attr('class', 'node')
-                .call(d3.drag()
-                    .on('start', dragstarted)
-                    .on('drag', dragged)
-                    .on('end', dragended));
-            
-            node.append('circle')
-                .attr('r', 5)
-                .attr('fill', d => getNodeColor(d))
-                .on('mouseover', showTooltip)
-                .on('mouseout', hideTooltip)
-                .on('click', highlightConnections);
-            
-            // Add labels
-            const labels = node.append('text')
-                .attr('dx', 8)
-                .attr('dy', '.35em')
-                .text(d => {
-                    // Shorten the label if it's too long
-                    const label = d.label;
-                    if (label.length > 25) {
-                        return label.substring(0, 22) + '...';
-                    }
-                    return label;
-                })
-                .style('display', showLabels ? 'block' : 'none');
-            
-            // Update simulation on tick
-            simulation.on('tick', () => {
-                link
-                    .attr('x1', d => d.source.x)
-                    .attr('y1', d => d.source.y)
-                    .attr('x2', d => d.target.x)
-                    .attr('y2', d => d.target.y);
+                function showTooltip(event, d) {
+                    const outCount = links.filter(function(l) {
+                        return (typeof l.source === 'object' ? l.source.id : l.source) === d.id;
+                    }).length;
+                    
+                    const inCount = links.filter(function(l) {
+                        return (typeof l.target === 'object' ? l.target.id : l.target) === d.id;
+                    }).length;
+                    
+                    tooltip.style.opacity = 1;
+                    tooltip.innerHTML = '<div><strong>' + d.label + '</strong></div>' +
+                                       '<div>Calls: ' + outCount + ' functions</div>' +
+                                       '<div>Called by: ' + inCount + ' functions</div>';
+                    
+                    tooltip.style.left = (event.pageX + 10) + 'px';
+                    tooltip.style.top = (event.pageY + 10) + 'px';
+                }
                 
-                node
-                    .attr('transform', d => \`translate(\${d.x},\${d.y})\`);
-            });
-            
-            // Center the graph
-            centerGraph();
-            
-            // Function to derive node color
-            function getNodeColor(d) {
-                // Color based on outgoing connections
-                const outgoingCount = links.filter(l => 
-                    (typeof l.source === 'object' ? l.source.id : l.source) === d.id
-                ).length;
+                function hideTooltip() {
+                    tooltip.style.opacity = 0;
+                }
                 
-                if (outgoingCount > 10) return '#e41a1c'; // Red for highly connected
-                if (outgoingCount > 5) return '#ff7f00';  // Orange for medium connected
-                if (outgoingCount > 0) return '#4daf4a';  // Green for some connections
-                return '#377eb8';  // Blue for leaf nodes
-            }
-            
-            // Show tooltip on hover
-            function showTooltip(event, d) {
-                const outCount = links.filter(l => 
-                    (typeof l.source === 'object' ? l.source.id : l.source) === d.id
-                ).length;
+                function highlightConnections(event, d) {
+                    link.style('stroke', '#999').style('stroke-width', '1px');
+                    node.select('circle').style('stroke', '#fff').style('stroke-width', '1.5px');
+                    
+                    d3.select(this).style('stroke', '#ff0000').style('stroke-width', '3px');
+                    
+                    const connected = new Set();
+                    connected.add(d.id);
+                    
+                    link.filter(function(l) { return (typeof l.target === 'object' ? l.target.id : l.target) === d.id; })
+                        .style('stroke', '#ff0000')
+                        .style('stroke-width', '2px')
+                        .each(function(l) {
+                            connected.add(typeof l.source === 'object' ? l.source.id : l.source);
+                        });
+                    
+                    link.filter(function(l) { return (typeof l.source === 'object' ? l.source.id : l.source) === d.id; })
+                        .style('stroke', '#0000ff')
+                        .style('stroke-width', '2px')
+                        .each(function(l) {
+                            connected.add(typeof l.target === 'object' ? l.target.id : l.target);
+                        });
+                    
+                    node.filter(function(n) { return connected.has(n.id) && n.id !== d.id; })
+                        .select('circle')
+                        .style('stroke', '#ff7f00')
+                        .style('stroke-width', '3px');
+                    
+                    showTooltip(event, d);
+                }
                 
-                const inCount = links.filter(l => 
-                    (typeof l.target === 'object' ? l.target.id : l.target) === d.id
-                ).length;
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                }
                 
-                tooltip.style.opacity = 1;
-                tooltip.innerHTML = \`
-                    <div><strong>\${d.label}</strong></div>
-                    <div>Calls: \${outCount} functions</div>
-                    <div>Called by: \${inCount} functions</div>
-                \`;
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
                 
-                tooltip.style.left = (event.pageX + 10) + 'px';
-                tooltip.style.top = (event.pageY + 10) + 'px';
-            }
-            
-            function hideTooltip() {
-                tooltip.style.opacity = 0;
-            }
-            
-            // Highlight connections on click
-            function highlightConnections(event, d) {
-                // Reset previous highlights
-                link.style('stroke', '#999').style('stroke-width', '1px');
-                node.select('circle').style('stroke', '#fff').style('stroke-width', '1.5px');
-                
-                // Highlight this node
-                d3.select(this).style('stroke', '#ff0000').style('stroke-width', '3px');
-                
-                // Highlight direct connections
-                const connected = new Set();
-                connected.add(d.id);
-                
-                // Find incoming connections
-                link.filter(l => (typeof l.target === 'object' ? l.target.id : l.target) === d.id)
-                    .style('stroke', '#ff0000')
-                    .style('stroke-width', '2px')
-                    .each(function(l) {
-                        connected.add(typeof l.source === 'object' ? l.source.id : l.source);
-                    });
-                
-                // Find outgoing connections
-                link.filter(l => (typeof l.source === 'object' ? l.source.id : l.source) === d.id)
-                    .style('stroke', '#0000ff')
-                    .style('stroke-width', '2px')
-                    .each(function(l) {
-                        connected.add(typeof l.target === 'object' ? l.target.id : l.target);
-                    });
-                
-                // Highlight connected nodes
-                node.filter(n => connected.has(n.id) && n.id !== d.id)
-                    .select('circle')
-                    .style('stroke', '#ff7f00')
-                    .style('stroke-width', '3px');
-                
-                // Show tooltip with more details
-                showTooltip(event, d);
-            }
-            
-            // Drag functions
-            function dragstarted(event, d) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-            
-            function dragged(event, d) {
-                d.fx = event.x;
-                d.fy = event.y;
-            }
-            
-            function dragended(event, d) {
-                if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }
+            } catch (error) {
+                console.error('Error in initializeGraph:', error);
             }
         }
         
-        // Center the graph in view
         function centerGraph() {
             const width = container.offsetWidth;
             const height = container.offsetHeight;
@@ -748,21 +1005,17 @@ function createGraphHTML() {
             svg.call(zoom.transform, initialTransform);
         }
         
-        // Search for a node
         function searchNode() {
             const searchTerm = document.getElementById('search').value.toLowerCase();
             if (!searchTerm) return;
             
-            // Find matching nodes
-            const matchingNodes = nodes.filter(n => 
-                n.label.toLowerCase().includes(searchTerm)
-            );
+            const matchingNodes = nodes.filter(function(n) {
+                return n.label.toLowerCase().includes(searchTerm);
+            });
             
             if (matchingNodes.length > 0) {
-                // Focus on the first matching node
                 const node = matchingNodes[0];
                 
-                // Calculate transform to center on this node
                 const scale = 1.2;
                 const width = container.offsetWidth;
                 const height = container.offsetHeight;
@@ -773,18 +1026,16 @@ function createGraphHTML() {
                     .translate(x, y)
                     .scale(scale);
                 
-                // Apply the transform with transition
                 svg.transition()
                     .duration(750)
                     .call(zoom.transform, transform);
                 
-                // Highlight the found node
                 d3.selectAll('.node circle')
                     .style('stroke', '#fff')
                     .style('stroke-width', '1.5px');
                 
                 d3.selectAll('.node')
-                    .filter(d => d.id === node.id)
+                    .filter(function(d) { return d.id === node.id; })
                     .select('circle')
                     .style('stroke', '#ff0000')
                     .style('stroke-width', '3px');
@@ -793,39 +1044,33 @@ function createGraphHTML() {
             }
         }
         
-        // Toggle node labels
         function toggleLabels() {
             showLabels = !showLabels;
             d3.selectAll('.node text')
                 .style('display', showLabels ? 'block' : 'none');
         }
         
-        // Export SVG function
         function exportSVG() {
-            // Create a copy of the SVG
             const svgCopy = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svgCopy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            
             const width = container.offsetWidth;
             const height = container.offsetHeight;
             svgCopy.setAttribute('width', width);
             svgCopy.setAttribute('height', height);
             
-            // Copy the SVG content
             const svgContent = svg.node().cloneNode(true);
             svgCopy.appendChild(svgContent);
             
-            // Create a downloadable blob
             const svgBlob = new Blob([svgCopy.outerHTML], {type: 'image/svg+xml'});
             const url = URL.createObjectURL(svgBlob);
             
-            // Create download link
             const link = document.createElement('a');
             link.href = url;
             link.download = 'function_call_graph.svg';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
