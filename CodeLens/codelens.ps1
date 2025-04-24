@@ -81,10 +81,10 @@ function GenerateCommitMessage {
 }
 function FindBug { 
     $Description = $Arg1
-    $SuspectsJson = $Arg2
+    $SuspectFunctions = $Arg2
 
-    if(-not $Description -or -not $SuspectsJson){
-        Write-Host "Usage: codelens findbug {description_string} {suspect_functions_json}"
+    if(-not $Description -or -not $SuspectFunctions){
+        Write-Host "Usage: codelens findbug <issue_description> func1,func2,func3"
         exit 1
     }
 
@@ -94,18 +94,39 @@ function FindBug {
         exit 1
     }
 
-    $ScriptPath = Join-Path $CodeLensPath "fixbug.py"
-    if (-not (Test-Path $ScriptPath)) {
-        Write-Host "Error: findbug.py not found at $ScriptPath"
+    $RepoRoot = git rev-parse --show-toplevel 2>$null
+    if (-not $RepoRoot) {
+        Write-Host "Error: Cannot find GitHub repo."
         exit 1
     }
 
-    # Call Python script with bug description and suspects
-    py $ScriptPath ""$Description"" ""$SuspectsJson"" $CodeLensPath
-
+    $ScriptPath = Join-Path $CodeLensPath "fixbug.py"
+    if (-not (Test-Path $ScriptPath)) {
+        Write-Host "Error: fixbug.py not found at $ScriptPath"
+        exit 1
+    }
+    
+    # Split the comma-separated function list
+    $FunctionsList = $SuspectFunctions -split ',' | ForEach-Object { $_.Trim() }
+    
+    # Build argument string for the Python script
+    $Arguments = @(
+        "$RepoRoot"
+        "--description", """$Description"""
+        "--functions"
+    )
+    
+    # Add all functions after the --functions flag
+    foreach ($function in $FunctionsList) {
+        $Arguments += """$function"""
+    }
+    
+    # Call Python script with the correct argument structure
+    py $ScriptPath $Arguments
+    
     Write-Host "Bug tracing initiated based on description and suspect functions..."
 }
-
+    
 if ($Command -eq "generate" -and $Arg1 -and $Arg2){
     GenerateDocumentationFromCommit
 }

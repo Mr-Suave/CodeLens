@@ -4,9 +4,12 @@ import os
 import ast
 import re
 from collections import defaultdict, deque
+from typing import Optional
 import networkx as nx
 import matplotlib.pyplot as plt
 import google.generativeai as genai
+from typing import Set, Tuple, Dict
+
 GEMINI_API_KEY = "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
 genai.configure(api_key=GEMINI_API_KEY)
 # Directories to exclude from analysis
@@ -332,11 +335,47 @@ def parse_js_file(file_path):
     
     return functions, edges
 
+def extract_function_code(file_path: str, function_name: str) -> Optional[str]:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                source = f.read()
+            tree = ast.parse(source)
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+                    start_line = node.lineno - 1
+                    end_line = node.end_lineno
+                    return "\n".join(source.splitlines()[start_line:end_line])
+            return None
+        except Exception as e:
+            print(f"Error extracting {function_name} from {file_path}: {e}")
+            return None
+        
+def get_code_blocks_for_nodes(nodes: Set[Tuple[str, str]]) -> Dict[str, str]:
+    result = {}
+    for path, func in nodes:
+        code = extract_function_code(path, func)
+        if code:
+            result[f"{path}::{func}"] = code
+    return result
 
-def main(description, suspects_json, repo_path):
-    """Main function to parse a repository and generate a call graph."""
+def parse_function_node(node_str):
+    if "::" in node_str:
+        return tuple(node_str.split("::", 1))  # (path, function)
+    else:
+        return (node_str, "")  # fallback if malformed
+
+def main(repo_path, description="", suspect_functions=None):
+    """
+    Main function to parse a repository and generate a call graph.
+    
+    Args:
+        repo_path: Path to the repository
+        description: Project description for LLM analysis
+        suspect_functions: List of function names to start BFS from
+    """
     graph = defaultdict(list)
     all_functions = set()
+    all_function_content = {}  # Store all function contents for analysis
     
     print(f"Analyzing repository: {repo_path}")
     print("Excluding directories:", ", ".join(EXCLUDED_DIRS))
@@ -361,6 +400,7 @@ def main(description, suspects_json, repo_path):
                         visitor = PythonFunctionVisitor(file_path)
                         visitor.visit(tree)
                         all_functions.update(visitor.functions)
+                        all_function_content.update(visitor.function_content)
                         for src, dst in visitor.edges:
                             graph[src].append(dst)
                     except Exception as e:
@@ -368,14 +408,16 @@ def main(description, suspects_json, repo_path):
                         continue
 
             elif file_path.endswith('.java'):
-                functions, edges = parse_java_file(file_path)
+                functions, edges, function_content = parse_java_file(file_path)
                 all_functions.update(functions)
+                all_function_content.update(function_content)
                 for src, dst in edges:
                     graph[src].append(dst)
                     
             elif file_path.endswith('.js'):
-                functions, edges = parse_js_file(file_path)
+                functions, edges, function_content = parse_js_file(file_path)
                 all_functions.update(functions)
+                all_function_content.update(function_content)
                 for src, dst in edges:
                     graph[src].append(dst)
         
@@ -436,14 +478,46 @@ def main(description, suspects_json, repo_path):
     
     print("\nResults written to function_list.txt")
 
-    try:
-        suspects = json.loads(suspects_json)
-        if not isinstance(suspects, list):
-            raise ValueError("Suspects JSON is not a list")
-    except Exception as e:
-        print(f"❌ Error parsing suspects JSON: {e}")
-        sys.exit(1)
+    # Now perform BFS on suspect functions
+    if not suspect_functions:
+        # If no suspect functions provided, ask the user
+        print("\n=== BFS ANALYSIS ===")
+        print("Enter function names to analyze (comma separated):")
+        user_input = input("> ")
+        suspect_functions = [name.strip() for name in user_input.split(',')]
+    
+    # Find matching functions in the codebase
+    suspects = []
+    for func_name in suspect_functions:
+        # Look for exact matches or functions containing the specified name
+        matches = [f for f in all_functions if func_name in f or func_name in clean_node_label(f)]
+        
+        if matches:
+            if len(matches) > 1:
+                print(f"\nMultiple matches found for '{func_name}':")
+                for i, match in enumerate(matches[:10]):
+                    print(f"{i+1}. {clean_node_label(match)}")
+                try:
+                    choice = int(input("Select a number (or 0 to skip): "))
+                    if 1 <= choice <= len(matches[:10]):
+                        suspects.append(matches[choice-1])
+                except (ValueError, IndexError):
+                    print(f"Skipping '{func_name}'")
+            else:
+                suspects.append(matches[0])
+                print(f"Found match for '{func_name}': {clean_node_label(matches[0])}")
+        else:
+            print(f"No match found for '{func_name}'")
+    
+    if not suspects:
+        print("No valid suspect functions found. Exiting.")
+        return
+    
+    print(f"\nStarting BFS analysis with {len(suspects)} suspect functions:")
+    for s in suspects:
+        print(f"- {clean_node_label(s)}")
 
+    # Perform BFS on suspect functions
     max_depth = 8
     visited = set()
     queue = deque()
@@ -451,54 +525,108 @@ def main(description, suspects_json, repo_path):
     for suspect in suspects:
         queue.append((suspect, 0))
 
+    # Function to analyze code with Gemini Pro
     def analyze_with_llm(description, functions_code):
-        model = genai.GenerativeModel("models/gemini-1.5-pro-002")
-        results = []
+        try:
+            model = genai.GenerativeModel("models/gemini-1.5-pro-002")
+            results = []
 
-        for fname, code in functions_code.items():
-            prompt = (
-                f"You are reviewing this function based on the following project description:\n"
-                f"{description}\n\n"
-                f"Please analyze the function below and determine if it is relevant to the described functionality:\n\n"
-                f"{code}\n\n"
-                f"Give a short score out of 100 and explain briefly why it's relevant or not."
-            )
-            try:
-                response = model.generate_content(prompt)
-                text = response.text.strip()
-                score_line = next((line for line in text.split('\n') if 'score' in line.lower()), "Score: N/A")
-                results.append((fname, f"{fname} - {score_line}", score_line))
-            except Exception as e:
-                results.append((fname, f"{fname} - Error calling Gemini: {e}", 0))
+            prompt_chunks = []
+            current_chunk = f"You are analyzing functions from a codebase with this description:\n{description}\n\n"
+            
+            for fname, code in functions_code.items():
+                function_prompt = f"Function: {clean_node_label(fname)}\n```\n{code}\n```\n\n"
+                
+                # Check if adding this function would make the prompt too large
+                if len(current_chunk + function_prompt) > 30000:  # Gemini has ~30k token limit
+                    prompt_chunks.append(current_chunk)
+                    current_chunk = f"You are analyzing functions from a codebase with this description:\n{description}\n\n"
+                
+                current_chunk += function_prompt
+            
+            if current_chunk:
+                prompt_chunks.append(current_chunk)
+            
+            for i, chunk in enumerate(prompt_chunks):
+                analysis_prompt = chunk + "\n\nFor each function above, provide:\n1. A one-line summary of what it does\n2. A relevance score (0-100) to the described project\n3. A brief explanation for the score\n\nFormat your response in a table with columns: Function, Summary, Score, Explanation"
+                
+                try:
+                    response = model.generate_content(analysis_prompt)
+                    text = response.text.strip()
+                    
+                    # Extract function names and scores from the response
+                    lines = text.split('\n')
+                    for line in lines:
+                        if '|' in line and any(clean_node_label(fname) in line for fname in functions_code.keys()):
+                            results.append(line)
+                except Exception as e:
+                    results.append(f"Error in chunk {i+1}: {str(e)}")
+            
+            return results
+        
+        except Exception as e:
+            print(f"Error setting up LLM analysis: {e}")
+            return [f"Error: {str(e)}"]
 
+    # Extract function code for analysis
+    def extract_function_code(node_list):
+        result = {}
+        for node in node_list:
+            if node in all_function_content:
+                result[node] = all_function_content[node]
+            else:
+                result[node] = f"// Function {clean_node_label(node)} code not available"
+        return result
+
+    # Performing BFS
     while queue:
         frontier = []
+        if not queue:
+            print("\nNo further levels to explore.")
+            break
         current_depth = queue[0][1]
+
+        
         if current_depth >= max_depth:
-            print("\n Max depth reached.")
+            print("\nMax depth reached.")
             break
 
+        # Get all nodes at current depth level
         while queue and queue[0][1] == current_depth:
             node, depth = queue.popleft()
             if node in visited:
                 continue
+            
             visited.add(node)
+            frontier.append(node)
+            
+            # Add neighbors to queue
             for neighbor in graph.get(node, []):
                 if neighbor not in visited:
-                    frontier.append(neighbor)
                     queue.append((neighbor, depth + 1))
 
         if not frontier:
             print("\nNo further levels to explore.")
             break
 
-        print(f"\nLevel {current_depth+1} Frontier:")
-        func_code = extract_functions(frontier)
-        analysis = analyze_with_llm(description, func_code)
+        print(f"\n=== Level {current_depth+1} Functions ===")
+        print(f"Found {len(frontier)} functions at this level")
+        
+        # Get function code for analysis
+        func_code = extract_function_code(frontier)
+        
+        # Analyze with LLM
+        if description:
+            print("Analyzing functions with LLM...")
+            analysis = analyze_with_llm(description, func_code)
+            for line in analysis:
+                print(line)
+        else:
+            # Just list the functions if no description provided
+            for func in frontier:
+                print(f"- {clean_node_label(func)}")
 
-        for _, line, _ in analysis:
-            print(f"  ➤ {line}")
-
+        # Ask if we should continue
         ans = input("\nShall we continue? [y/n]: ").strip().lower()
         if ans != 'y':
             print("🛑 Stopping the analysis.")
@@ -506,12 +634,196 @@ def main(description, suspects_json, repo_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python draw_graph.py \"<Description>\" \"<SuspectsJson>\" <CodeLensPath>")
-        sys.exit(1)
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Analyze function call graph in a codebase")
+    parser.add_argument("repo_path", help="Path to the code repository")
+    parser.add_argument("-d", "--description", help="Project description for LLM analysis", default="")
+    parser.add_argument("-f", "--functions", nargs="+", help="List of functions to analyze", default=[])
+    
+    args = parser.parse_args()
+    
+    main(args.repo_path, args.description, args.functions)
 
-    description = sys.argv[1]
-    suspects_json = sys.argv[2]
-    repo_path = sys.argv[3]
+# def main(description, suspects_json, repo_path):
+#     """Main function to parse a repository and generate a call graph."""
+#     graph = defaultdict(list)
+#     all_functions = set()
+    
+#     print(f"Analyzing repository: {repo_path}")
+#     print("Excluding directories:", ", ".join(EXCLUDED_DIRS))
+    
+#     # Get source files with exclusions
+#     source_files = get_source_files(repo_path)
+#     print(f"Found {len(source_files)} source files to analyze after filtering")
+    
+#     file_count = 0
+#     for file_path in source_files:
+#         file_count += 1
+        
+#         # Show progress
+#         if file_count % 10 == 0 or file_count == len(source_files):
+#             print(f"Processing file {file_count}/{len(source_files)}: {os.path.basename(file_path)}")
+        
+#         try:
+#             if file_path.endswith('.py'):
+#                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+#                     try:
+#                         tree = ast.parse(f.read())
+#                         visitor = PythonFunctionVisitor(file_path)
+#                         visitor.visit(tree)
+#                         all_functions.update(visitor.functions)
+#                         for src, dst in visitor.edges:
+#                             graph[src].append(dst)
+#                     except Exception as e:
+#                         print(f"Error parsing Python file {file_path}: {e}")
+#                         continue
 
-    main(description, suspects_json, repo_path)
+#             elif file_path.endswith('.java'):
+#                 functions, edges = parse_java_file(file_path)
+#                 all_functions.update(functions)
+#                 for src, dst in edges:
+#                     graph[src].append(dst)
+                    
+#             elif file_path.endswith('.js'):
+#                 functions, edges = parse_js_file(file_path)
+#                 all_functions.update(functions)
+#                 for src, dst in edges:
+#                     graph[src].append(dst)
+        
+#         except Exception as e:
+#             print(f"Unexpected error processing {file_path}: {e}")
+#             continue
+    
+#     # Output all functions with clean labels (limited output for large repos)
+#     print("\n=== ALL FUNCTIONS ===")
+#     function_list = [clean_node_label(func) for func in sorted(all_functions)]
+    
+#     if len(function_list) > 100:
+#         print(f"Found {len(function_list)} functions. Showing first 100:")
+#         for func in function_list[:100]:
+#             print(func)
+#         print(f"... and {len(function_list) - 100} more functions.")
+#     else:
+#         for func in function_list:
+#             print(func)
+    
+#     print(f"\nTotal functions found: {len(all_functions)}")
+    
+#     # Output the call graph (limited output for large graphs)
+#     print("\n=== FUNCTION CALL GRAPH (Adjacency List) ===")
+#     graph_items = list(sorted(graph.items()))
+    
+#     if len(graph_items) > 50:
+#         print(f"Found {len(graph_items)} function relationships. Showing first 50:")
+#         for func, callees in graph_items[:50]:
+#             if callees:  # Only show functions that call others
+#                 print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees[:5])}{', ...' if len(callees) > 5 else ''}")
+#         print(f"... and {len(graph_items) - 50} more relationships.")
+#     else:
+#         for func, callees in graph_items:
+#             if callees:
+#                 print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees)}")
+    
+#     # Generate visualization with limits
+#     if graph:
+#         print("\nGenerating call graph visualization...")
+#         try:
+#             draw_call_graph(graph)
+#         except Exception as e:
+#             print(f"Error generating graph visualization: {e}")
+#     else:
+#         print("\nNo function call relationships found to visualize.")
+    
+#     # Write results to file
+#     with open("function_list.txt", "w", encoding="utf-8") as f:
+#         f.write("=== ALL FUNCTIONS ===\n")
+#         for func in sorted(all_functions):
+#             f.write(f"{clean_node_label(func)}\n")
+        
+#         f.write("\n=== FUNCTION CALL GRAPH ===\n")
+#         for func in sorted(graph):
+#             if graph[func]:  # Only include functions that call others
+#                 f.write(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in graph[func])}\n")
+    
+#     print("\nResults written to function_list.txt")
+
+#     try:
+#         suspects = json.loads(suspects_json)
+#         if not isinstance(suspects, list):
+#             raise ValueError("Suspects JSON is not a list")
+#     except Exception as e:
+#         print(f"❌ Error parsing suspects JSON: {e}")
+#         sys.exit(1)
+
+#     max_depth = 8
+#     visited = set()
+#     queue = deque()
+
+#     for suspect in suspects:
+#         queue.append((suspect, 0))
+
+#     def analyze_with_llm(description, functions_code):
+#         model = genai.GenerativeModel("models/gemini-1.5-pro-002")
+#         results = []
+
+#         for fname, code in functions_code.items():
+#             prompt = (
+#                 f"You are reviewing this function based on the following project description:\n"
+#                 f"{description}\n\n"
+#                 f"Please analyze the function below and determine if it is relevant to the described functionality:\n\n"
+#                 f"{code}\n\n"
+#                 f"Give a short score out of 100 and explain briefly why it's relevant or not."
+#             )
+#             try:
+#                 response = model.generate_content(prompt)
+#                 text = response.text.strip()
+#                 score_line = next((line for line in text.split('\n') if 'score' in line.lower()), "Score: N/A")
+#                 results.append((fname, f"{fname} - {score_line}", score_line))
+#             except Exception as e:
+#                 results.append((fname, f"{fname} - Error calling Gemini: {e}", 0))
+
+#     while queue:
+#         frontier = []
+#         current_depth = queue[0][1]
+#         if current_depth >= max_depth:
+#             print("\n Max depth reached.")
+#             break
+
+#         while queue and queue[0][1] == current_depth:
+#             node, depth = queue.popleft()
+#             if node in visited:
+#                 continue
+#             visited.add(node)
+#             for neighbor in graph.get(node, []):
+#                 if neighbor not in visited:
+#                     frontier.append(neighbor)
+#                     queue.append((neighbor, depth + 1))
+
+#         if not frontier:
+#             print("\nNo further levels to explore.")
+#             break
+
+#         print(f"\nLevel {current_depth+1} Frontier:")
+#         func_code = extract_function_code(frontier)
+#         analysis = analyze_with_llm(description, func_code)
+
+#         for _, line, _ in analysis:
+#             print(f"  ➤ {line}")
+
+#         ans = input("\nShall we continue? [y/n]: ").strip().lower()
+#         if ans != 'y':
+#             print("🛑 Stopping the analysis.")
+#             break
+
+
+# if __name__ == "__main__":
+#     if len(sys.argv) != 4:
+#         print("Usage: python draw_graph.py \"<Description>\" \"<SuspectsJson>\" <CodeLensPath>")
+#         sys.exit(1)
+
+#     description = sys.argv[1]
+#     suspects_json = sys.argv[2]
+#     repo_path = sys.argv[3]
+
+#     main(description, suspects_json, repo_path)
