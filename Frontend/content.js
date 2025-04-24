@@ -73,7 +73,7 @@ function createCodeLensButton() {
   button.id = 'codelens-btn';
   button.innerText = 'CodeLens';
   document.body.appendChild(button);
-  
+
   button.onclick = () => {
     const overlay = document.createElement('div');
     overlay.id = 'codelens-overlay';
@@ -89,7 +89,7 @@ function createCodeLensButton() {
     subtitle.className = 'codelens-subtitle';
     subtitle.innerText = 'Documentation making just got easier!';
     overlay.appendChild(subtitle);
-    
+
     // First Button: Documentation
     const docBtn = document.createElement('button');
     docBtn.className = 'overlay-btn';
@@ -107,17 +107,49 @@ function createCodeLensButton() {
     overlay.appendChild(docBtn);
     overlay.appendChild(graphBtn);
 
-    // Third Button: Commit History Graph
+    // Third Button: Commit History Graph (with overlay image)
     const historyBtn = document.createElement('button');
     historyBtn.className = 'overlay-btn';
     historyBtn.innerText = 'View Commit History Graph';
     historyBtn.addEventListener('click', () => {
+      const imageOverlay = document.createElement('div');
+      imageOverlay.id = 'image-overlay';
+      imageOverlay.style.position = 'fixed';
+      imageOverlay.style.top = '0';
+      imageOverlay.style.left = '0';
+      imageOverlay.style.width = '100vw';
+      imageOverlay.style.height = '100vh';
+      imageOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+      imageOverlay.style.display = 'flex';
+      imageOverlay.style.justifyContent = 'center';
+      imageOverlay.style.alignItems = 'center';
+      imageOverlay.style.zIndex = '10000';
+
       const img = document.createElement('img');
-      img.src = '../commit_graph.png'; // Adjust path if needed
+      img.src = chrome.runtime.getURL('images/commit_graph.cairo.png');
       img.alt = 'Commit History Graph';
       img.style.maxWidth = '90%';
-      img.style.marginTop = '20px';
-      overlay.appendChild(img);
+      img.style.maxHeight = '90%';
+      img.style.border = '4px solid white';
+      img.style.borderRadius = '12px';
+      imageOverlay.appendChild(img);
+
+      const closeBtn = document.createElement('button');
+      closeBtn.innerText = '×';
+      closeBtn.style.position = 'absolute';
+      closeBtn.style.top = '20px';
+      closeBtn.style.right = '30px';
+      closeBtn.style.fontSize = '36px';
+      closeBtn.style.color = 'white';
+      closeBtn.style.background = 'transparent';
+      closeBtn.style.border = 'none';
+      closeBtn.style.cursor = 'pointer';
+      closeBtn.addEventListener('click', () => {
+        imageOverlay.remove();
+      });
+
+      imageOverlay.appendChild(closeBtn);
+      document.body.appendChild(imageOverlay);
     });
     overlay.appendChild(historyBtn);
 

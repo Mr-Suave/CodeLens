@@ -1,25 +1,30 @@
 {
-    "manifest_version": 3,
-    "name": "CodeLens for GitHub",
-    "version": "1.0",
-    "description": "Overlay GitHub repos with extra tools.",
-    "permissions": ["tabs", "scripting"],
-    "host_permissions": [
-      "https://github.com/*",
-      "https://api.github.com/*"
-    ],
-    "action": {
-      "default_title": "CodeLens"
-    },
-    "background": {
-      "service_worker": "background.js"
-    },
-    "content_scripts": [
-      {
-        "matches": ["https://github.com/*"],
-        "js": ["content.js"],
-        "css": ["styles.css"]
-      }
-    ]
-
-  }
+  "manifest_version": 3,
+  "name": "CodeLens for GitHub",
+  "version": "1.0",
+  "description": "Overlay GitHub repos with extra tools.",
+  "permissions": ["tabs", "scripting"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://api.github.com/*"
+  ],
+  "action": {
+    "default_title": "CodeLens"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["images/commit_graph.cairo.png"],
+      "matches": ["https://github.com/*"]
+    }
+  ]
+}
