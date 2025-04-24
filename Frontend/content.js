@@ -228,9 +228,22 @@ async function findDocumentationForAudience(audience) {
   const overlay = document.getElementById('codelens-overlay');
   if (!overlay) return;
 
+  // Get the position and dimensions of the current overlay before clearing it
+  const overlayRect = overlay.getBoundingClientRect();
+  const originalPosition = {
+    top: overlayRect.top,
+    right: window.innerWidth - overlayRect.right,
+    width: overlayRect.width
+  };
+
+  // Clear the existing overlay content completely
+  overlay.innerHTML = '';
+
   const loadingMsg = document.createElement('div');
   loadingMsg.className = 'loading-message';
   loadingMsg.innerText = `Searching for ${fileName}...`;
+  loadingMsg.style.padding = '20px';
+  loadingMsg.style.textAlign = 'center';
   overlay.appendChild(loadingMsg);
 
   try {
@@ -244,28 +257,73 @@ async function findDocumentationForAudience(audience) {
     const content = await fetchFileContent(fileInfo.download_url);
     loadingMsg.remove();
 
+    // Modify the overlay to take the same position but expanded height
+    overlay.style.position = 'fixed';
+    overlay.style.top = `${originalPosition.top}px`;
+    overlay.style.right = `${originalPosition.right}px`;
+    overlay.style.width = `${originalPosition.width}px`;
+    overlay.style.height = '90vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+    overlay.style.zIndex = '9999';
+    overlay.style.borderRadius = '10px';
+    overlay.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.4)';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.padding = '15px';
+    overlay.style.boxSizing = 'border-box';
+
+    // Add a header with the audience type and back button
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '15px';
+    
+    const docTitle = document.createElement('h2');
+    docTitle.innerText = `Documentation for ${audience}`;
+    docTitle.style.color = '#ffffff';
+    docTitle.style.margin = '0';
+    header.appendChild(docTitle);
+    
+    const backButton = document.createElement('button');
+    backButton.className = 'back-btn';
+    backButton.innerText = '← Back';
+    backButton.style.cursor = 'pointer';
+    backButton.style.padding = '5px 10px';
+    backButton.style.backgroundColor = '#444';
+    backButton.style.color = '#fff';
+    backButton.style.border = 'none';
+    backButton.style.borderRadius = '4px';
+    backButton.style.position = 'absolute'; // Position absolute to move to top left
+    backButton.style.top = '0'; // Align to top
+    backButton.style.left = '0'; // Align to left
+    backButton.addEventListener('click', showAudienceSelection);
+    header.appendChild(backButton);
+    
+    overlay.appendChild(header);
+
+    // Create the documentation content container
     const docContent = document.createElement('div');
-    docContent.className = 'doc-content';
-    docContent.style.padding = '20px';
-    docContent.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
-    docContent.style.border = '2px solid #e0e0e0';
-    docContent.style.borderRadius = '10px';
-    docContent.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-    docContent.style.maxHeight = '70vh';
+    docContent.style.flex = '1';
     docContent.style.overflow = 'auto';
+    docContent.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+    docContent.style.borderRadius = '8px';
+    docContent.style.padding = '20px';
     docContent.style.fontFamily = "'Georgia', serif";
+    docContent.style.color = '#ffffff';
 
     const pathInfo = document.createElement('p');
     pathInfo.innerText = `Source: ${content.path}`;
     pathInfo.style.fontWeight = 'bold';
-    pathInfo.style.color = '#ffffff';
-    pathInfo.style.margin = '0 0 15px 0';
+    pathInfo.style.color = '#aaaaaa';
+    pathInfo.style.marginBottom = '15px';
+    pathInfo.style.borderBottom = '1px solid #444';
+    pathInfo.style.paddingBottom = '10px';
     docContent.appendChild(pathInfo);
 
     const formattedContent = document.createElement('div');
     formattedContent.className = 'markdown-content';
     formattedContent.style.lineHeight = '1.8';
-    formattedContent.style.color = '#ffffff';
 
     const markdownText = content.content;
     const formattedHtml = markdownToHtml(markdownText);
@@ -273,6 +331,7 @@ async function findDocumentationForAudience(audience) {
 
     docContent.appendChild(formattedContent);
     overlay.appendChild(docContent);
+    
   } catch (error) {
     loadingMsg.remove();
     showError(error.message);
