@@ -101,7 +101,7 @@ Provide clear, concise, and audience-specific documentation.
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type] [cwd_path]")
+        print("Usage: py code_documentation_generation_api.py <path_to_cloned_repo> [user_type] [cwd_path]")
         sys.exit(1)
 
     repo_path = os.path.abspath(sys.argv[1])
