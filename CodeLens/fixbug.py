@@ -175,6 +175,8 @@ class PythonFunctionVisitor(ast.NodeVisitor):
         self.edges = []
         self.builtin_funcs = set(dir(__builtins__))
         self.current_function = None
+        # Add the missing attribute
+        self.function_content = {}
 
     def visit_FunctionDef(self, node):
         func_name = f"{self.file_path}::{node.name}"
@@ -183,6 +185,26 @@ class PythonFunctionVisitor(ast.NodeVisitor):
         # Save the current function context
         previous_function = self.current_function
         self.current_function = func_name
+        
+        # Save function content - extract code for the function
+        try:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
+                source = f.read()
+                lines = source.splitlines()
+                if hasattr(node, 'end_lineno'):
+                    # For Python 3.8+
+                    start_line = node.lineno - 1
+                    end_line = node.end_lineno
+                    func_code = "\n".join(lines[start_line:end_line])
+                else:
+                    # Fallback for older Python versions
+                    start_line = node.lineno - 1
+                    # Approximate the end by finding the next def/class at same indentation
+                    end_line = len(lines)
+                    func_code = lines[start_line]  # At least get the function signature
+                self.function_content[func_name] = func_code
+        except Exception as e:
+            self.function_content[func_name] = f"# Error extracting function code: {e}"
         
         # Process function body
         self.generic_visit(node)
@@ -223,6 +245,7 @@ def parse_java_file(file_path):
     """Parse a Java file to extract function names and calls using regex."""
     functions = set()
     edges = []
+    function_content = {}  # Add this to store function content
     
     # Pattern for method declarations
     method_pattern = r'(?:public|private|protected|static|\s)+(?:[\w\<\>\[\]]+\s+)*([\w]+)\s*\([^\)]*\)\s*(?:\{|throws)'
@@ -241,8 +264,9 @@ def parse_java_file(file_path):
             full_name = f"{file_path}::{method_name}"
             functions.add(full_name)
             
-            # Look for method calls within this method - simplified approach
-            method_start = match.end()
+            # Extract method content
+            method_start = match.start()
+            method_end = method_start
             # Find the end of method with a basic approach (not perfect but fast)
             next_opening = content.find('{', method_start)
             if next_opening > 0:
@@ -258,6 +282,11 @@ def parse_java_file(file_path):
                     method_end += 1
                 
                 if method_end > next_opening + 1:
+                    # Store method content
+                    method_content = content[method_start:method_end]
+                    function_content[full_name] = method_content
+                    
+                    # Find method calls
                     method_body = content[next_opening+1:method_end-1]
                     # Limit number of calls to avoid performance issues
                     call_matches = list(re.finditer(call_pattern, method_body))[:50]
@@ -269,7 +298,7 @@ def parse_java_file(file_path):
     except Exception as e:
         print(f"Error in parsing Java file {file_path}: {e}")
         
-    return functions, edges
+    return functions, edges, function_content
 
 
 # --- JAVASCRIPT PARSER ---
@@ -277,6 +306,7 @@ def parse_js_file(file_path):
     """Parse a JavaScript file to extract function names and calls using regex."""
     functions = set()
     edges = []
+    function_content = {}  # Add this to store function content
     
     # Pattern for function declarations (various forms)
     func_patterns = [
@@ -298,7 +328,7 @@ def parse_js_file(file_path):
         lines = content.split('\n')
         if any(len(line) > 500 for line in lines[:20]):
             print(f"Skipping likely minified JS file: {file_path}")
-            return functions, edges
+            return functions, edges, function_content
         
         # Extract all function declarations
         current_functions = []
@@ -318,10 +348,13 @@ def parse_js_file(file_path):
             # Determine end of function (either next function or reasonable limit)
             if i < len(current_functions) - 1:
                 next_func_start = current_functions[i+1][1]
-                func_content = content[func_start:next_func_start]
+                func_content = content[start_pos:next_func_start]
+                function_content[func_name] = func_content
             else:
                 # For the last function, limit scanning
-                func_content = content[func_start:min(func_start + 10000, len(content))]
+                end_pos = min(func_start + 10000, len(content))
+                func_content = content[start_pos:end_pos]
+                function_content[func_name] = func_content
             
             # Find function calls
             call_matches = list(re.finditer(call_pattern, func_content))[:50]  # Limit calls per function
@@ -333,29 +366,34 @@ def parse_js_file(file_path):
     except Exception as e:
         print(f"Error in parsing JavaScript file {file_path}: {e}")
     
-    return functions, edges
+    return functions, edges, function_content
 
 def extract_function_code(file_path: str, function_name: str) -> Optional[str]:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                source = f.read()
-            tree = ast.parse(source)
-            for node in tree.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
-                    start_line = node.lineno - 1
-                    end_line = node.end_lineno
-                    return "\n".join(source.splitlines()[start_line:end_line])
-            return None
-        except Exception as e:
-            print(f"Error extracting {function_name} from {file_path}: {e}")
-            return None
+    """Extract function code from a file."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            source = f.read()
+        tree = ast.parse(source)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+                start_line = node.lineno - 1
+                end_line = node.end_lineno if hasattr(node, 'end_lineno') else len(source.splitlines())
+                return "\n".join(source.splitlines()[start_line:end_line])
+        return None
+    except Exception as e:
+        print(f"Error extracting {function_name} from {file_path}: {e}")
+        return None
         
-def get_code_blocks_for_nodes(nodes: Set[Tuple[str, str]]) -> Dict[str, str]:
+def get_code_blocks_for_nodes(nodes: Set[str]) -> Dict[str, str]:
     result = {}
-    for path, func in nodes:
-        code = extract_function_code(path, func)
-        if code:
-            result[f"{path}::{func}"] = code
+    for node_str in nodes:
+        try:
+            path, func = parse_function_node(node_str)
+            code = extract_function_code(path, func)
+            if code:
+                result[node_str] = code
+        except Exception as e:
+            print(f"Error getting code for {node_str}: {e}")
     return result
 
 def parse_function_node(node_str):
@@ -568,52 +606,42 @@ def main(repo_path, description="", suspect_functions=None):
             print(f"Error setting up LLM analysis: {e}")
             return [f"Error: {str(e)}"]
 
-    # Extract function code for analysis
-    def extract_function_code(node_list):
-        result = {}
-        for node in node_list:
-            if node in all_function_content:
-                result[node] = all_function_content[node]
-            else:
-                result[node] = f"// Function {clean_node_label(node)} code not available"
-        return result
-
     # Performing BFS
-    while queue:
+    visited = set()  # Track visited nodes
+    level = 0  # Current BFS level
+
+    # Mark all initial suspect functions as "to be visited"
+    for suspect in suspects:
+        queue.append((suspect, 0))
+        visited.add(suspect)  # Mark as visited when adding to queue
+
+    while queue and level < max_depth:
+        # Get all nodes at current level
+        level_size = len(queue)
         frontier = []
-        if not queue:
-            print("\nNo further levels to explore.")
-            break
-        current_depth = queue[0][1]
-
         
-        if current_depth >= max_depth:
-            print("\nMax depth reached.")
-            break
-
-        # Get all nodes at current depth level
-        while queue and queue[0][1] == current_depth:
+        print(f"\n=== Level {level+1} Functions ===")
+        
+        # Process all nodes at the current level
+        for _ in range(level_size):
             node, depth = queue.popleft()
-            if node in visited:
-                continue
-            
-            visited.add(node)
             frontier.append(node)
             
-            # Add neighbors to queue
+            # Add unvisited neighbors to queue
             for neighbor in graph.get(node, []):
                 if neighbor not in visited:
                     queue.append((neighbor, depth + 1))
-
-        if not frontier:
-            print("\nNo further levels to explore.")
-            break
-
-        print(f"\n=== Level {current_depth+1} Functions ===")
+                    visited.add(neighbor)  # Mark as visited when adding to queue
+        
         print(f"Found {len(frontier)} functions at this level")
         
         # Get function code for analysis
-        func_code = extract_function_code(frontier)
+        func_code = {}
+        for node in frontier:
+            if node in all_function_content:
+                func_code[node] = all_function_content[node]
+            else:
+                func_code[node] = f"// Function {clean_node_label(node)} code not available"
         
         # Analyze with LLM
         if description:
@@ -631,6 +659,13 @@ def main(repo_path, description="", suspect_functions=None):
         if ans != 'y':
             print("🛑 Stopping the analysis.")
             break
+            
+        level += 1  # Move to next level
+
+    if level >= max_depth:
+        print("\nMax depth reached.")
+    elif not queue:
+        print("\nNo further levels to explore.")
 
 
 if __name__ == "__main__":
@@ -644,186 +679,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args.repo_path, args.description, args.functions)
-
-# def main(description, suspects_json, repo_path):
-#     """Main function to parse a repository and generate a call graph."""
-#     graph = defaultdict(list)
-#     all_functions = set()
-    
-#     print(f"Analyzing repository: {repo_path}")
-#     print("Excluding directories:", ", ".join(EXCLUDED_DIRS))
-    
-#     # Get source files with exclusions
-#     source_files = get_source_files(repo_path)
-#     print(f"Found {len(source_files)} source files to analyze after filtering")
-    
-#     file_count = 0
-#     for file_path in source_files:
-#         file_count += 1
-        
-#         # Show progress
-#         if file_count % 10 == 0 or file_count == len(source_files):
-#             print(f"Processing file {file_count}/{len(source_files)}: {os.path.basename(file_path)}")
-        
-#         try:
-#             if file_path.endswith('.py'):
-#                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-#                     try:
-#                         tree = ast.parse(f.read())
-#                         visitor = PythonFunctionVisitor(file_path)
-#                         visitor.visit(tree)
-#                         all_functions.update(visitor.functions)
-#                         for src, dst in visitor.edges:
-#                             graph[src].append(dst)
-#                     except Exception as e:
-#                         print(f"Error parsing Python file {file_path}: {e}")
-#                         continue
-
-#             elif file_path.endswith('.java'):
-#                 functions, edges = parse_java_file(file_path)
-#                 all_functions.update(functions)
-#                 for src, dst in edges:
-#                     graph[src].append(dst)
-                    
-#             elif file_path.endswith('.js'):
-#                 functions, edges = parse_js_file(file_path)
-#                 all_functions.update(functions)
-#                 for src, dst in edges:
-#                     graph[src].append(dst)
-        
-#         except Exception as e:
-#             print(f"Unexpected error processing {file_path}: {e}")
-#             continue
-    
-#     # Output all functions with clean labels (limited output for large repos)
-#     print("\n=== ALL FUNCTIONS ===")
-#     function_list = [clean_node_label(func) for func in sorted(all_functions)]
-    
-#     if len(function_list) > 100:
-#         print(f"Found {len(function_list)} functions. Showing first 100:")
-#         for func in function_list[:100]:
-#             print(func)
-#         print(f"... and {len(function_list) - 100} more functions.")
-#     else:
-#         for func in function_list:
-#             print(func)
-    
-#     print(f"\nTotal functions found: {len(all_functions)}")
-    
-#     # Output the call graph (limited output for large graphs)
-#     print("\n=== FUNCTION CALL GRAPH (Adjacency List) ===")
-#     graph_items = list(sorted(graph.items()))
-    
-#     if len(graph_items) > 50:
-#         print(f"Found {len(graph_items)} function relationships. Showing first 50:")
-#         for func, callees in graph_items[:50]:
-#             if callees:  # Only show functions that call others
-#                 print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees[:5])}{', ...' if len(callees) > 5 else ''}")
-#         print(f"... and {len(graph_items) - 50} more relationships.")
-#     else:
-#         for func, callees in graph_items:
-#             if callees:
-#                 print(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in callees)}")
-    
-#     # Generate visualization with limits
-#     if graph:
-#         print("\nGenerating call graph visualization...")
-#         try:
-#             draw_call_graph(graph)
-#         except Exception as e:
-#             print(f"Error generating graph visualization: {e}")
-#     else:
-#         print("\nNo function call relationships found to visualize.")
-    
-#     # Write results to file
-#     with open("function_list.txt", "w", encoding="utf-8") as f:
-#         f.write("=== ALL FUNCTIONS ===\n")
-#         for func in sorted(all_functions):
-#             f.write(f"{clean_node_label(func)}\n")
-        
-#         f.write("\n=== FUNCTION CALL GRAPH ===\n")
-#         for func in sorted(graph):
-#             if graph[func]:  # Only include functions that call others
-#                 f.write(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in graph[func])}\n")
-    
-#     print("\nResults written to function_list.txt")
-
-#     try:
-#         suspects = json.loads(suspects_json)
-#         if not isinstance(suspects, list):
-#             raise ValueError("Suspects JSON is not a list")
-#     except Exception as e:
-#         print(f"❌ Error parsing suspects JSON: {e}")
-#         sys.exit(1)
-
-#     max_depth = 8
-#     visited = set()
-#     queue = deque()
-
-#     for suspect in suspects:
-#         queue.append((suspect, 0))
-
-#     def analyze_with_llm(description, functions_code):
-#         model = genai.GenerativeModel("models/gemini-1.5-pro-002")
-#         results = []
-
-#         for fname, code in functions_code.items():
-#             prompt = (
-#                 f"You are reviewing this function based on the following project description:\n"
-#                 f"{description}\n\n"
-#                 f"Please analyze the function below and determine if it is relevant to the described functionality:\n\n"
-#                 f"{code}\n\n"
-#                 f"Give a short score out of 100 and explain briefly why it's relevant or not."
-#             )
-#             try:
-#                 response = model.generate_content(prompt)
-#                 text = response.text.strip()
-#                 score_line = next((line for line in text.split('\n') if 'score' in line.lower()), "Score: N/A")
-#                 results.append((fname, f"{fname} - {score_line}", score_line))
-#             except Exception as e:
-#                 results.append((fname, f"{fname} - Error calling Gemini: {e}", 0))
-
-#     while queue:
-#         frontier = []
-#         current_depth = queue[0][1]
-#         if current_depth >= max_depth:
-#             print("\n Max depth reached.")
-#             break
-
-#         while queue and queue[0][1] == current_depth:
-#             node, depth = queue.popleft()
-#             if node in visited:
-#                 continue
-#             visited.add(node)
-#             for neighbor in graph.get(node, []):
-#                 if neighbor not in visited:
-#                     frontier.append(neighbor)
-#                     queue.append((neighbor, depth + 1))
-
-#         if not frontier:
-#             print("\nNo further levels to explore.")
-#             break
-
-#         print(f"\nLevel {current_depth+1} Frontier:")
-#         func_code = extract_function_code(frontier)
-#         analysis = analyze_with_llm(description, func_code)
-
-#         for _, line, _ in analysis:
-#             print(f"  ➤ {line}")
-
-#         ans = input("\nShall we continue? [y/n]: ").strip().lower()
-#         if ans != 'y':
-#             print("🛑 Stopping the analysis.")
-#             break
-
-
-# if __name__ == "__main__":
-#     if len(sys.argv) != 4:
-#         print("Usage: python draw_graph.py \"<Description>\" \"<SuspectsJson>\" <CodeLensPath>")
-#         sys.exit(1)
-
-#     description = sys.argv[1]
-#     suspects_json = sys.argv[2]
-#     repo_path = sys.argv[3]
-
-#     main(description, suspects_json, repo_path)
