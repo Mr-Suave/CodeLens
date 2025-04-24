@@ -84,7 +84,7 @@ function FindBug {
     $SuspectFunctions = $Arg2
 
     if(-not $Description -or -not $SuspectFunctions){
-        Write-Host "Usage: codelens findbug <issue_description> func1,func2,func3"
+        Write-Host Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" uploadImage handleImageInput sendToServer"
         exit 1
     }
 
@@ -227,7 +227,7 @@ else{
     Write-Host "  codelens generate {user_type} {commit_hash}"
     Write-Host "  codelens regenerate"
     Write-Host "  codelens commit"
-    Write-Host "  codelens findbug {description_string} {suspect_functions_json}"
-    Write-Host "  Ex: codelens findbug "App crashes when uploading image" '["uploadImage", "handleImageInput", "sendToServer"]'"
+    Write-Host "  codelens findbug {description_string} {suspect_functions_list}"
+    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" uploadImage handleImageInput sendToServer"
     exit 1
 }
