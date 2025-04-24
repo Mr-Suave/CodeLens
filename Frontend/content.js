@@ -79,6 +79,7 @@ function createCodeLensButton() {
     overlay.id = 'codelens-overlay';
     // Hide the CodeLens button permanently
     button.style.display = 'none';
+
     const title = document.createElement('h2');
     title.className = 'codelens-title';
     title.innerText = 'CodeLens';
@@ -89,20 +90,35 @@ function createCodeLensButton() {
     subtitle.innerText = 'Documentation making just got easier!';
     overlay.appendChild(subtitle);
     
+    // First Button: Documentation
     const docBtn = document.createElement('button');
     docBtn.className = 'overlay-btn';
     docBtn.innerText = 'View Documentation For the Repository';
-    
-    docBtn.addEventListener('click', showAudienceSelection);
 
+    // Second Button: Commit Messages Graph
     const graphBtn = document.createElement('button');
     graphBtn.className = 'overlay-btn';
-    graphBtn.innerText = 'View Function Call Graph';
+    graphBtn.innerText = 'View Commit Messages Graph';
     
+    // Add event listener for the graph button
     graphBtn.addEventListener('click', showFunctionCallGraph);
 
     overlay.appendChild(docBtn);
     overlay.appendChild(graphBtn);
+
+    // Third Button: Commit History Graph
+    const historyBtn = document.createElement('button');
+    historyBtn.className = 'overlay-btn';
+    historyBtn.innerText = 'View Commit History Graph';
+    historyBtn.addEventListener('click', () => {
+      const img = document.createElement('img');
+      img.src = '../commit_graph.png'; // Adjust path if needed
+      img.alt = 'Commit History Graph';
+      img.style.maxWidth = '90%';
+      img.style.marginTop = '20px';
+      overlay.appendChild(img);
+    });
+    overlay.appendChild(historyBtn);
 
     document.body.appendChild(overlay);
 
@@ -344,6 +360,8 @@ function showError(message) {
     overlay.appendChild(errorMsg);
   }
 }
+
+
 
 function showFunctionCallGraph() {
   const repoInfo = getRepoInfo();
