@@ -1,0 +1,21 @@
+Commit: 3f8e35066b4093803565050e3bb9a063c299f8c2
+Message: basic network graph
+Files Changed:
+ - gitlog.py
+
+========================================
+
+Commit: e9e07e761751867b290997a1a04bdf7aa9231461
+Message: minor change
+Files Changed:
+ - CodeLens/fixbug.py
+
+========================================
+
+Commit: 215557530bf9df3d12b57d1981a7ac3fcdb422df
+Message: minor
+Files Changed:
+ - CodeLens/draw_graph.py
+
+========================================
+
