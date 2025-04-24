@@ -94,6 +94,7 @@ function createCodeLensButton() {
     const docBtn = document.createElement('button');
     docBtn.className = 'overlay-btn';
     docBtn.innerText = 'View Documentation For the Repository';
+    docBtn.addEventListener('click', showAudienceSelection); // Added event listener
 
     // Second Button: Commit Messages Graph
     const graphBtn = document.createElement('button');
@@ -361,8 +362,6 @@ function showError(message) {
   }
 }
 
-
-
 function showFunctionCallGraph() {
   const repoInfo = getRepoInfo();
   if (!repoInfo) {
@@ -462,7 +461,7 @@ function showFunctionCallGraph() {
 }
 
 async function fetchFunctionList(repoInfo) {
-  const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/main/function_list.txt`;
+  const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/dil/main/function_list.txt`;
   
   try {
     const response = await fetch(url);
