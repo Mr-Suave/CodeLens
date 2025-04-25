@@ -13,7 +13,6 @@ function getRepoInfo() {
   return null;
 }
 
-// Reusable outside click handler for overlays
 function handleOutsideClick(e, container, button) {
   const rect = container.getBoundingClientRect();
   if (
@@ -23,12 +22,10 @@ function handleOutsideClick(e, container, button) {
     e.clientY > rect.bottom
   ) {
     container.remove();
-    // Do not show the button again
     document.removeEventListener('click', handleOutsideClick);
   }
 }
 
-// Reusable outside click handler for graph container
 function handleGraphOutsideClick(e, container, button) {
   const rect = container.getBoundingClientRect();
   const iframe = container.querySelector('iframe');
@@ -44,17 +41,14 @@ function handleGraphOutsideClick(e, container, button) {
     e.preventDefault();
     e.stopPropagation();
     container.remove();
-    // Do not show the button or reopen the overlay
     document.removeEventListener('click', handleGraphOutsideClick);
   }
 }
 
-// Reusable outside click handler for the CodeLens button
 function handleButtonOutsideClick(e, button) {
   const rect = button.getBoundingClientRect();
   const overlay = document.getElementById('codelens-overlay');
   const graphContainer = document.getElementById('codelens-graph-container');
-  // Only proceed if neither overlay nor graph is present
   if (!overlay && !graphContainer) {
     if (
       e.clientX < rect.left ||
@@ -77,7 +71,6 @@ function createCodeLensButton() {
   button.onclick = () => {
     const overlay = document.createElement('div');
     overlay.id = 'codelens-overlay';
-    // Hide the CodeLens button permanently
     button.style.display = 'none';
 
     const title = document.createElement('h2');
@@ -90,24 +83,16 @@ function createCodeLensButton() {
     subtitle.innerText = 'Documentation making just got easier!';
     overlay.appendChild(subtitle);
 
-    // First Button: Documentation
     const docBtn = document.createElement('button');
     docBtn.className = 'overlay-btn';
     docBtn.innerText = 'View Documentation For the Repository';
-    docBtn.addEventListener('click', showAudienceSelection); // Added event listener
+    docBtn.addEventListener('click', showAudienceSelection);
 
-    // Second Button: Commit Messages Graph
     const graphBtn = document.createElement('button');
     graphBtn.className = 'overlay-btn';
-    graphBtn.innerText = 'View Commit Messages Graph';
-    
-    // Add event listener for the graph button
+    graphBtn.innerText = 'View Function Call Graph';
     graphBtn.addEventListener('click', showFunctionCallGraph);
 
-    overlay.appendChild(docBtn);
-    overlay.appendChild(graphBtn);
-
-    // Third Button: Commit History Graph (with overlay image)
     const historyBtn = document.createElement('button');
     historyBtn.className = 'overlay-btn';
     historyBtn.innerText = 'View Commit History Graph';
@@ -151,17 +136,17 @@ function createCodeLensButton() {
       imageOverlay.appendChild(closeBtn);
       document.body.appendChild(imageOverlay);
     });
+    overlay.appendChild(docBtn);
+    overlay.appendChild(graphBtn);
     overlay.appendChild(historyBtn);
 
     document.body.appendChild(overlay);
 
-    // Add outside click handler for overlay
     setTimeout(() => {
       document.addEventListener('click', (e) => handleOutsideClick(e, overlay, button));
     }, 100);
   };
 
-  // Add outside click handler for button
   setTimeout(() => {
     document.addEventListener('click', (e) => handleButtonOutsideClick(e, button));
   }, 100);
@@ -240,11 +225,9 @@ function showAudienceSelection() {
   backButton.innerText = '← Back';
   backButton.addEventListener('click', () => {
     audienceOverlay.remove();
-    // Do not show the CodeLens button
   });
   audienceOverlay.appendChild(backButton);
   
-  // Add outside click handler
   setTimeout(() => {
     document.addEventListener('click', (e) => handleOutsideClick(e, audienceOverlay, document.getElementById('codelens-btn')));
   }, 100);
@@ -261,9 +244,20 @@ async function findDocumentationForAudience(audience) {
   const overlay = document.getElementById('codelens-overlay');
   if (!overlay) return;
 
+  const overlayRect = overlay.getBoundingClientRect();
+  const originalPosition = {
+    top: overlayRect.top,
+    right: window.innerWidth - overlayRect.right,
+    width: overlayRect.width
+  };
+
+  overlay.innerHTML = '';
+
   const loadingMsg = document.createElement('div');
   loadingMsg.className = 'loading-message';
   loadingMsg.innerText = `Searching for ${fileName}...`;
+  loadingMsg.style.padding = '20px';
+  loadingMsg.style.textAlign = 'center';
   overlay.appendChild(loadingMsg);
 
   try {
@@ -277,28 +271,70 @@ async function findDocumentationForAudience(audience) {
     const content = await fetchFileContent(fileInfo.download_url);
     loadingMsg.remove();
 
+    overlay.style.position = 'fixed';
+    overlay.style.top = `${originalPosition.top}px`;
+    overlay.style.right = `${originalPosition.right}px`;
+    overlay.style.width = `${originalPosition.width}px`;
+    overlay.style.height = '90vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+    overlay.style.zIndex = '9999';
+    overlay.style.borderRadius = '10px';
+    overlay.style.boxShadow = '0 0 20px rgba(0, 0, 0, 0.4)';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.padding = '15px';
+    overlay.style.boxSizing = 'border-box';
+
+    const header = document.createElement('div');
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '15px';
+    
+    const docTitle = document.createElement('h2');
+    docTitle.innerText = `Documentation for ${audience}`;
+    docTitle.style.color = '#ffffff';
+    docTitle.style.margin = '0';
+    header.appendChild(docTitle);
+    
+    const backButton = document.createElement('button');
+    backButton.className = 'back-btn';
+    backButton.innerText = '← Back';
+    backButton.style.cursor = 'pointer';
+    backButton.style.padding = '5px 10px';
+    backButton.style.backgroundColor = '#444';
+    backButton.style.color = '#fff';
+    backButton.style.border = 'none';
+    backButton.style.borderRadius = '4px';
+    backButton.style.position = 'absolute';
+    backButton.style.top = '0';
+    backButton.style.left = '0';
+    backButton.addEventListener('click', showAudienceSelection);
+    header.appendChild(backButton);
+    
+    overlay.appendChild(header);
+
     const docContent = document.createElement('div');
-    docContent.className = 'doc-content';
-    docContent.style.padding = '20px';
-    docContent.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
-    docContent.style.border = '2px solid #e0e0e0';
-    docContent.style.borderRadius = '10px';
-    docContent.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-    docContent.style.maxHeight = '70vh';
+    docContent.style.flex = '1';
     docContent.style.overflow = 'auto';
+    docContent.style.backgroundColor = 'rgba(20, 20, 20, 0.8)';
+    docContent.style.borderRadius = '8px';
+    docContent.style.padding = '20px';
     docContent.style.fontFamily = "'Georgia', serif";
+    docContent.style.color = '#ffffff';
 
     const pathInfo = document.createElement('p');
     pathInfo.innerText = `Source: ${content.path}`;
     pathInfo.style.fontWeight = 'bold';
-    pathInfo.style.color = '#ffffff';
-    pathInfo.style.margin = '0 0 15px 0';
+    pathInfo.style.color = '#aaaaaa';
+    pathInfo.style.marginBottom = '15px';
+    pathInfo.style.borderBottom = '1px solid #444';
+    pathInfo.style.paddingBottom = '10px';
     docContent.appendChild(pathInfo);
 
     const formattedContent = document.createElement('div');
     formattedContent.className = 'markdown-content';
     formattedContent.style.lineHeight = '1.8';
-    formattedContent.style.color = '#ffffff';
 
     const markdownText = content.content;
     const formattedHtml = markdownToHtml(markdownText);
@@ -306,6 +342,7 @@ async function findDocumentationForAudience(audience) {
 
     docContent.appendChild(formattedContent);
     overlay.appendChild(docContent);
+    
   } catch (error) {
     loadingMsg.remove();
     showError(error.message);
@@ -396,8 +433,10 @@ function showError(message) {
 }
 
 function showFunctionCallGraph() {
+  console.log('showFunctionCallGraph: Starting');
   const repoInfo = getRepoInfo();
   if (!repoInfo) {
+    console.error('showFunctionCallGraph: Could not determine repository information.');
     alert('Could not determine repository information.');
     return;
   }
@@ -433,7 +472,6 @@ function showFunctionCallGraph() {
   closeButton.innerText = '✕';
   closeButton.onclick = () => {
     graphContainer.remove();
-    // Do not show the CodeLens button
     document.removeEventListener('click', handleGraphOutsideClick);
   };
   graphContainer.appendChild(closeButton);
@@ -452,7 +490,6 @@ function showFunctionCallGraph() {
   backButton.innerText = '← Back';
   backButton.onclick = () => {
     graphContainer.remove();
-    // Do not show the CodeLens button or reopen the overlay
     document.removeEventListener('click', handleGraphOutsideClick);
   };
   graphContainer.appendChild(backButton);
@@ -464,17 +501,20 @@ function showFunctionCallGraph() {
   loadingIndicator.innerText = 'Searching for function_list.txt in repository...';
   graphContainer.appendChild(loadingIndicator);
 
-  // Add outside click handler with delay
   setTimeout(() => {
     document.addEventListener('click', (e) => handleGraphOutsideClick(e, graphContainer, codeLensButton));
   }, 100);
 
+  console.log('showFunctionCallGraph: Fetching function list');
   fetchFunctionList(repoInfo)
     .then(functionListContent => {
+      console.log('showFunctionCallGraph: Function list fetched successfully');
+      loadingIndicator.remove();
       renderFunctionCallGraph(graphContainer, functionListContent);
     })
     .catch(error => {
-      console.error('Error fetching function list:', error);
+      console.error('showFunctionCallGraph: Error fetching function list:', error);
+      loadingIndicator.remove();
       graphContainer.innerHTML = '';
       graphContainer.appendChild(closeButton);
       graphContainer.appendChild(backButton);
@@ -487,34 +527,37 @@ function showFunctionCallGraph() {
       errorMessage.innerHTML = `
         <h2>Graph Not Available</h2>
         <p>Repo owner did not generate function call graph for this repository.</p>
-        <p>To enable this feature, the repository needs to include a function_list.txt file in its root directory.</p>
+        <p>Using sample data instead.</p>
       `;
       graphContainer.appendChild(errorMessage);
+      
+      console.log('showFunctionCallGraph: Falling back to sample data');
+      renderFunctionCallGraph(graphContainer, null);
     });
 }
 
 async function fetchFunctionList(repoInfo) {
-  const url = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/dil/main/function_list.txt`;
-  
+  console.log('fetchFunctionList: Attempting to fetch function_list.txt');
   try {
-    const response = await fetch(url);
-    if (response.ok) {
-      return await response.text();
+    const defaultBranch = await fetchDefaultBranch(repoInfo.owner, repoInfo.repo);
+    const fileInfo = await searchDirectoryForFile(repoInfo.owner, repoInfo.repo, defaultBranch, "", "function_list.txt");
+    if (!fileInfo) {
+      throw new Error('function_list.txt not found in repository');
     }
-    
-    const masterUrl = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/master/function_list.txt`;
-    const masterResponse = await fetch(masterUrl);
-    if (masterResponse.ok) {
-      return await masterResponse.text();
+    const response = await fetch(fileInfo.download_url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch function_list.txt: ${response.status}`);
     }
-    
-    throw new Error('function_list.txt not found in repository');
+    console.log('fetchFunctionList: Successfully fetched function_list.txt');
+    return await response.text();
   } catch (error) {
+    console.error('fetchFunctionList: Error:', error);
     throw error;
   }
 }
 
 function renderFunctionCallGraph(container, functionListContent) {
+  console.log('renderFunctionCallGraph: Starting with functionListContent:', !!functionListContent);
   container.innerHTML = '';
   
   const graphFrame = document.createElement('iframe');
@@ -522,26 +565,44 @@ function renderFunctionCallGraph(container, functionListContent) {
   graphFrame.style.width = '100%';
   graphFrame.style.height = '100%';
   graphFrame.style.border = 'none';
+  graphFrame.style.backgroundColor = '#f8f9fa';
   container.appendChild(graphFrame);
   
   graphFrame.onload = () => {
-    const doc = graphFrame.contentDocument || graphFrame.contentWindow.document;
-    
-    if (functionListContent) {
-      const graphData = parseAndPrepareFunctionList(functionListContent);
-      initializeGraphInIframe(doc, graphData);
-    } else {
-      const sampleData = createSampleGraphData();
-      initializeGraphInIframe(doc, sampleData);
+    console.log('renderFunctionCallGraph: Iframe onload triggered');
+    try {
+      // Parse and send graph data to iframe
+      let graphData;
+      if (functionListContent) {
+        console.log('renderFunctionCallGraph: Parsing function list content');
+        graphData = parseAndPrepareFunctionList(functionListContent);
+        console.log('renderFunctionCallGraph: Graph data:', graphData);
+      } else {
+        console.log('renderFunctionCallGraph: Using sample data');
+        graphData = createSampleGraphData();
+        console.log('renderFunctionCallGraph: Sample data:', graphData);
+      }
+      
+      // Send graph data to iframe via postMessage
+      graphFrame.contentWindow.postMessage({
+        type: 'renderGraph',
+        graphData
+      }, '*');
+    } catch (error) {
+      console.error('renderFunctionCallGraph: Error preparing graph data:', error);
+      container.innerHTML = '<div style="color: red; padding: 20px;">Error: Failed to prepare graph data.</div>';
     }
   };
   
   const graphHTML = createGraphHTML();
   const blob = new Blob([graphHTML], { type: 'text/html' });
-  graphFrame.src = URL.createObjectURL(blob);
+  const blobUrl = URL.createObjectURL(blob);
+  console.log('renderFunctionCallGraph: Setting iframe src to:', blobUrl);
+  graphFrame.src = blobUrl;
 }
 
 function parseAndPrepareFunctionList(content) {
+  console.log('parseAndPrepareFunctionList: Starting');
   const nodes = new Map();
   const links = [];
   
@@ -575,13 +636,16 @@ function parseAndPrepareFunctionList(content) {
     }
   }
   
-  return {
+  const result = {
     nodes: Array.from(nodes.values()),
     links
   };
+  console.log('parseAndPrepareFunctionList: Result:', result);
+  return result;
 }
 
 function createSampleGraphData() {
+  console.log('createSampleGraphData: Generating sample data');
   return {
     nodes: [
       { id: "main.py::main", label: "main.py::main" },
@@ -601,14 +665,11 @@ function createSampleGraphData() {
   };
 }
 
-function initializeGraphInIframe(doc, graphData) {
-  const iframe = doc.defaultView || doc.parentWindow;
-  if (iframe && iframe.initializeGraphWithData) {
-    iframe.initializeGraphWithData(graphData);
-  }
-}
-
 function createGraphHTML() {
+  console.log('createGraphHTML: Generating HTML');
+  const d3Src = chrome.runtime.getURL('lib/d3.min.js');
+  const graphSrc = chrome.runtime.getURL('graph.js');
+  console.log('createGraphHTML: Script sources:', { d3Src, graphSrc });
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -625,7 +686,7 @@ function createGraphHTML() {
         }
         #container {
             position: relative;
-            width: 100vw;
+            width: 100%;
             height: 100vh;
         }
         svg {
@@ -702,6 +763,11 @@ function createGraphHTML() {
             font-size: 18px;
             color: #666;
         }
+        #error {
+            color: red;
+            padding: 20px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -727,353 +793,8 @@ function createGraphHTML() {
             </div>
         </div>
     </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script>
-        let container, svg, g, zoom;
-        let nodes = [];
-        let links = [];
-        let simulation;
-        let showLabels = true;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            try {
-                container = document.getElementById('container');
-                const searchInput = document.getElementById('search');
-                const searchBtn = document.getElementById('search-btn');
-                const zoomInBtn = document.getElementById('zoom-in');
-                const zoomOutBtn = document.getElementById('zoom-out');
-                const resetBtn = document.getElementById('reset');
-                const toggleLabelsBtn = document.getElementById('toggle-labels');
-                const exportSvgBtn = document.getElementById('export-svg');
-                const loadingIndicator = document.getElementById('loading');
-                const tooltip = document.querySelector('.tooltip');
-                const nodeCountSpan = document.getElementById('node-count');
-                const edgeCountSpan = document.getElementById('edge-count');
-                
-                setup();
-                
-                searchBtn.addEventListener('click', searchNode);
-                searchInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') searchNode();
-                });
-                
-                zoomInBtn.addEventListener('click', function() {
-                    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
-                });
-                
-                zoomOutBtn.addEventListener('click', function() {
-                    svg.transition().duration(300).call(zoom.scaleBy, 0.7);
-                });
-                
-                resetBtn.addEventListener('click', centerGraph);
-                
-                toggleLabelsBtn.addEventListener('click', toggleLabels);
-                
-                exportSvgBtn.addEventListener('click', exportSVG);
-                
-                window.initializeGraphWithData = function(graphData) {
-                    initializeGraph(graphData);
-                    loadingIndicator.style.display = 'none';
-                };
-            } catch (error) {
-                console.error('Error initializing graph:', error);
-            }
-        });
-        
-        function setup() {
-            const width = container.offsetWidth;
-            const height = container.offsetHeight;
-            
-            svg = d3.select(container).append('svg')
-                .attr('width', width)
-                .attr('height', height);
-            
-            svg.append('defs').append('marker')
-                .attr('id', 'arrow')
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 20)
-                .attr('refY', 0)
-                .attr('markerWidth', 6)
-                .attr('markerHeight', 6)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', '#999');
-            
-            g = svg.append('g');
-            
-            zoom = d3.zoom()
-                .scaleExtent([0.1, 8])
-                .on('zoom', function(event) {
-                    g.attr('transform', event.transform);
-                });
-            
-            svg.call(zoom);
-        }
-        
-        function initializeGraph(graphData) {
-            try {
-                const width = container.offsetWidth;
-                const height = container.offsetHeight;
-                
-                document.getElementById('node-count').textContent = graphData.nodes.length;
-                document.getElementById('edge-count').textContent = graphData.links.length;
-                
-                nodes = graphData.nodes;
-                links = graphData.links;
-                
-                if (nodes.length > 500) {
-                    console.warn('Graph is very large (' + nodes.length + ' nodes). Limiting to 500 nodes.');
-                    const nodeUsageCounts = new Map();
-                    links.forEach(function(link) {
-                        nodeUsageCounts.set(link.source, (nodeUsageCounts.get(link.source) || 0) + 1);
-                        nodeUsageCounts.set(link.target, (nodeUsageCounts.get(link.target) || 0) + 1);
-                    });
-                    
-                    const sortedNodes = nodes.slice().sort(function(a, b) {
-                        const countA = nodeUsageCounts.get(a.id) || 0;
-                        const countB = nodeUsageCounts.get(b.id) || 0;
-                        return countB - countA;
-                    });
-                    
-                    nodes = sortedNodes.slice(0, 500);
-                    const keepNodeIds = new Set(nodes.map(function(n) { return n.id; }));
-                    
-                    links = links.filter(function(link) {
-                        return keepNodeIds.has(typeof link.source === 'object' ? link.source.id : link.source) &&
-                               keepNodeIds.has(typeof link.target === 'object' ? link.target.id : link.target);
-                    });
-                }
-                
-                if (links.length > 1000) {
-                    console.warn('Too many edges (' + links.length + '). Limiting to 1000 edges.');
-                    links = links.slice(0, 1000);
-                }
-                
-                simulation = d3.forceSimulation(nodes)
-                    .force('link', d3.forceLink(links).id(function(d) { return d.id; }).distance(100))
-                    .force('charge', d3.forceManyBody().strength(-300))
-                    .force('center', d3.forceCenter(width / 2, height / 2))
-                    .force('x', d3.forceX(width / 2).strength(0.1))
-                    .force('y', d3.forceY(height / 2).strength(0.1));
-                
-                const link = g.append('g')
-                    .attr('class', 'links')
-                    .selectAll('line')
-                    .data(links)
-                    .enter()
-                    .append('line')
-                    .attr('class', 'link');
-                
-                const node = g.append('g')
-                    .attr('class', 'nodes')
-                    .selectAll('g')
-                    .data(nodes)
-                    .enter()
-                    .append('g')
-                    .attr('class', 'node')
-                    .call(d3.drag()
-                        .on('start', dragstarted)
-                        .on('drag', dragged)
-                        .on('end', dragended));
-                
-                node.append('circle')
-                    .attr('r', 5)
-                    .attr('fill', getNodeColor)
-                    .on('mouseover', showTooltip)
-                    .on('mouseout', hideTooltip)
-                    .on('click', highlightConnections);
-                
-                const labels = node.append('text')
-                    .attr('dx', 8)
-                    .attr('dy', '.35em')
-                    .text(function(d) {
-                        const label = d.label;
-                        if (label.length > 25) {
-                            return label.substring(0, 22) + '...';
-                        }
-                        return label;
-                    })
-                    .style('display', showLabels ? 'block' : 'none');
-                
-                simulation.on('tick', function() {
-                    link
-                        .attr('x1', function(d) { return d.source.x; })
-                        .attr('y1', function(d) { return d.source.y; })
-                        .attr('x2', function(d) { return d.target.x; })
-                        .attr('y2', function(d) { return d.target.y; });
-                    
-                    node
-                        .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
-                });
-                
-                centerGraph();
-                
-                function getNodeColor(d) {
-                    const outgoingCount = links.filter(function(l) {
-                        return (typeof l.source === 'object' ? l.source.id : l.source) === d.id;
-                    }).length;
-                    
-                    if (outgoingCount > 10) return '#e41a1c';
-                    if (outgoingCount > 5) return '#ff7f00';
-                    if (outgoingCount > 0) return '#4daf4a';
-                    return '#377eb8';
-                }
-                
-                function showTooltip(event, d) {
-                    const outCount = links.filter(function(l) {
-                        return (typeof l.source === 'object' ? l.source.id : l.source) === d.id;
-                    }).length;
-                    
-                    const inCount = links.filter(function(l) {
-                        return (typeof l.target === 'object' ? l.target.id : l.target) === d.id;
-                    }).length;
-                    
-                    tooltip.style.opacity = 1;
-                    tooltip.innerHTML = '<div><strong>' + d.label + '</strong></div>' +
-                                       '<div>Calls: ' + outCount + ' functions</div>' +
-                                       '<div>Called by: ' + inCount + ' functions</div>';
-                    
-                    tooltip.style.left = (event.pageX + 10) + 'px';
-                    tooltip.style.top = (event.pageY + 10) + 'px';
-                }
-                
-                function hideTooltip() {
-                    tooltip.style.opacity = 0;
-                }
-                
-                function highlightConnections(event, d) {
-                    link.style('stroke', '#999').style('stroke-width', '1px');
-                    node.select('circle').style('stroke', '#fff').style('stroke-width', '1.5px');
-                    
-                    d3.select(this).style('stroke', '#ff0000').style('stroke-width', '3px');
-                    
-                    const connected = new Set();
-                    connected.add(d.id);
-                    
-                    link.filter(function(l) { return (typeof l.target === 'object' ? l.target.id : l.target) === d.id; })
-                        .style('stroke', '#ff0000')
-                        .style('stroke-width', '2px')
-                        .each(function(l) {
-                            connected.add(typeof l.source === 'object' ? l.source.id : l.source);
-                        });
-                    
-                    link.filter(function(l) { return (typeof l.source === 'object' ? l.source.id : l.source) === d.id; })
-                        .style('stroke', '#0000ff')
-                        .style('stroke-width', '2px')
-                        .each(function(l) {
-                            connected.add(typeof l.target === 'object' ? l.target.id : l.target);
-                        });
-                    
-                    node.filter(function(n) { return connected.has(n.id) && n.id !== d.id; })
-                        .select('circle')
-                        .style('stroke', '#ff7f00')
-                        .style('stroke-width', '3px');
-                    
-                    showTooltip(event, d);
-                }
-                
-                function dragstarted(event, d) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x;
-                    d.fy = d.y;
-                }
-                
-                function dragged(event, d) {
-                    d.fx = event.x;
-                    d.fy = event.y;
-                }
-                
-                function dragended(event, d) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    d.fx = null;
-                    d.fy = null;
-                }
-            } catch (error) {
-                console.error('Error in initializeGraph:', error);
-            }
-        }
-        
-        function centerGraph() {
-            const width = container.offsetWidth;
-            const height = container.offsetHeight;
-            
-            const initialTransform = d3.zoomIdentity
-                .translate(width / 2, height / 2)
-                .scale(0.5);
-            
-            svg.call(zoom.transform, initialTransform);
-        }
-        
-        function searchNode() {
-            const searchTerm = document.getElementById('search').value.toLowerCase();
-            if (!searchTerm) return;
-            
-            const matchingNodes = nodes.filter(function(n) {
-                return n.label.toLowerCase().includes(searchTerm);
-            });
-            
-            if (matchingNodes.length > 0) {
-                const node = matchingNodes[0];
-                
-                const scale = 1.2;
-                const width = container.offsetWidth;
-                const height = container.offsetHeight;
-                const x = width / 2 - node.x * scale;
-                const y = height / 2 - node.y * scale;
-                
-                const transform = d3.zoomIdentity
-                    .translate(x, y)
-                    .scale(scale);
-                
-                svg.transition()
-                    .duration(750)
-                    .call(zoom.transform, transform);
-                
-                d3.selectAll('.node circle')
-                    .style('stroke', '#fff')
-                    .style('stroke-width', '1.5px');
-                
-                d3.selectAll('.node')
-                    .filter(function(d) { return d.id === node.id; })
-                    .select('circle')
-                    .style('stroke', '#ff0000')
-                    .style('stroke-width', '3px');
-            } else {
-                alert('No matching nodes found');
-            }
-        }
-        
-        function toggleLabels() {
-            showLabels = !showLabels;
-            d3.selectAll('.node text')
-                .style('display', showLabels ? 'block' : 'none');
-        }
-        
-        function exportSVG() {
-            const svgCopy = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svgCopy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            const width = container.offsetWidth;
-            const height = container.offsetHeight;
-            svgCopy.setAttribute('width', width);
-            svgCopy.setAttribute('height', height);
-            
-            const svgContent = svg.node().cloneNode(true);
-            svgCopy.appendChild(svgContent);
-            
-            const svgBlob = new Blob([svgCopy.outerHTML], {type: 'image/svg+xml'});
-            const url = URL.createObjectURL(svgBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'function_call_graph.svg';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }
-    </script>
+    <script src="${d3Src}"></script>
+    <script src="${graphSrc}"></script>
 </body>
 </html>`;
 }
