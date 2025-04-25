@@ -3,7 +3,10 @@
   "name": "CodeLens for GitHub",
   "version": "1.0",
   "description": "Overlay GitHub repos with extra tools.",
-  "permissions": ["tabs", "scripting"],
+  "permissions": [
+    "tabs",
+    "scripting"
+  ],
   "host_permissions": [
     "https://github.com/*",
     "https://api.github.com/*"
@@ -23,8 +26,11 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["images/commit_graph.cairo.png"],
+      "resources": [
+        "images/commit_history.png"
+      ],
       "matches": ["https://github.com/*"]
     }
   ]
 }
+
