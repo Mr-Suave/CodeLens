@@ -1,7 +1,8 @@
 param (
     [string]$Command,
     [string]$Arg1,
-    [string]$Arg2
+    [string]$Arg2,
+    [int]$NumCommits
 )
 $ValidUserTypes = @("novice","senior","client")
 
@@ -20,6 +21,43 @@ function ShowRecentCommits{
 
     Write-Host "`nTo document a commit, run:"
     Write-Host "  codelens generate novice {commit_hash}"
+}
+
+function GenerateCommitGraph {
+    # Get the repository root
+    $RepoRoot = git rev-parse --show-toplevel 2>$null
+    if (-not $RepoRoot) {
+        Write-Host "Error: Cannot find GitHub repo."
+        exit 1
+    }
+
+    # Get the GitHub remote URL
+    $GitHubUrl = git config --get remote.origin.url
+    if (-not $GitHubUrl) {
+        Write-Host "Error: No GitHub remote URL found"
+        exit 1
+    }
+
+    $GitHubUrl = $GitHubUrl -replace "^git@github.com:", "https://github.com/" -replace "\.git$", ""
+
+    # Get the CODELENS_PATH environment variable
+    $CodeLensPath = $env:CODELENS_PATH
+    if (-not $CodeLensPath) {
+        Write-Host "Error: CODELENS_PATH environment variable not set"
+        exit 1
+    }
+
+    # Path to the Python script
+    $ScriptPath = Join-Path $CodeLensPath "github_commits.py"
+    if (-not (Test-Path $ScriptPath)) {
+        Write-Host "Error: Required script not found: $ScriptPath"
+        exit 1
+    }
+
+    # Run the Python script to generate the commit graph, passing the number of commits as an argument
+    py $ScriptPath $RepoRoot $NumCommits
+
+    Write-Host "Commit graph generation triggered."
 }
 
 function GenerateDocumentationFromCommit {
@@ -220,6 +258,15 @@ elseif($Command -eq "commit"){
 elseif ($Command -eq "findbug") {
     FindBug
 }
+elseif($Command -eq "commitgraph") {
+    if (-not $NumCommits) {
+        Write-Host "Error: Please specify the number of commits (N). Usage: codelens commitgraph N"
+        exit 1
+    }
+    
+    GenerateCommitGraph
+}
+
 else{
     Write-Host "Usage:"
     Write-Host "  codelens generate {user_type}"
@@ -229,5 +276,6 @@ else{
     Write-Host "  codelens commit"
     Write-Host "  codelens findbug {description_string} {suspect_functions_list}"
     Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" uploadImage handleImageInput sendToServer"
+    Write-Host "Error: Invalid command. Usage: codelens commitgraph N"
     exit 1
 }
