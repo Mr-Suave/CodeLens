@@ -565,46 +565,54 @@ def main(repo_path, description="", suspect_functions=None):
 
     # Function to analyze code with Gemini Pro
     def analyze_with_llm(description, functions_code):
+        """Synchronous function that waits for LLM results"""
         try:
             model = genai.GenerativeModel("models/gemini-1.5-pro-002")
             results = []
-
+            
+            # Prepare the prompt chunks
             prompt_chunks = []
-            current_chunk = f"You are analyzing functions from a codebase with this description:\n{description}\n\n"
+            current_chunk = f"Project Description:\n{description}\n\nAnalyze these functions:\n\n"
             
             for fname, code in functions_code.items():
-                function_prompt = f"Function: {clean_node_label(fname)}\n```\n{code}\n```\n\n"
+                func_part = f"Function: {clean_node_label(fname)}\n```\n{code}\n```\n\n"
                 
-                # Check if adding this function would make the prompt too large
-                if len(current_chunk + function_prompt) > 30000:  # Gemini has ~30k token limit
+                if len(current_chunk + func_part) > 30000:  # Stay under token limit
                     prompt_chunks.append(current_chunk)
-                    current_chunk = f"You are analyzing functions from a codebase with this description:\n{description}\n\n"
+                    current_chunk = f"Project Description:\n{description}\n\nContinued analysis:\n\n"
                 
-                current_chunk += function_prompt
+                current_chunk += func_part
             
             if current_chunk:
                 prompt_chunks.append(current_chunk)
             
-            for i, chunk in enumerate(prompt_chunks):
-                analysis_prompt = chunk + "\n\nFor each function above, provide:\n1. A one-line summary of what it does\n2. A relevance score (0-100) to the described project\n3. A brief explanation for the score\n\nFormat your response in a table with columns: Function, Summary, Score, Explanation"
+            # Process each chunk synchronously
+            for chunk in prompt_chunks:
+                full_prompt = chunk + """\nFor each function:
+    1. One-line purpose summary
+    2. Relevance score (0-100) that should indicate the chance of bug(0-nobug , 100-full potential for bug)
+    3. Potential issues/risks
+
+    Format as:
+    Function | Summary | Score | Notes
+    --------|---------|-------|------"""
                 
                 try:
-                    response = model.generate_content(analysis_prompt)
-                    text = response.text.strip()
-                    
-                    # Extract function names and scores from the response
-                    lines = text.split('\n')
-                    for line in lines:
-                        if '|' in line and any(clean_node_label(fname) in line for fname in functions_code.keys()):
-                            results.append(line)
+                    # This will block until response is received
+                    response = model.generate_content(full_prompt)
+                    if response.text:
+                        results.append(response.text)
+                    else:
+                        results.append("No response from LLM")
                 except Exception as e:
-                    results.append(f"Error in chunk {i+1}: {str(e)}")
+                    results.append(f"LLM Error: {str(e)}")
+                    continue
             
-            return results
+            return "\n".join(results) if results else "No analysis generated"
         
         except Exception as e:
-            print(f"Error setting up LLM analysis: {e}")
-            return [f"Error: {str(e)}"]
+            return f"LLM Setup Error: {str(e)}"
+
 
     # Performing BFS
     visited = set()  # Track visited nodes
@@ -644,28 +652,24 @@ def main(repo_path, description="", suspect_functions=None):
                 func_code[node] = f"// Function {clean_node_label(node)} code not available"
         
         # Analyze with LLM
-        if description:
-            print("Analyzing functions with LLM...")
-            analysis = analyze_with_llm(description, func_code)
-            for line in analysis:
-                print(line)
-        else:
-            # Just list the functions if no description provided
-            for func in frontier:
-                print(f"- {clean_node_label(func)}")
+        print("Analyzing functions with LLM...")
+        analysis_result = analyze_with_llm(description, func_code)
+        print("\n=== LLM Analysis Results ===")
+        print(analysis_result)
+        print("="*30)
 
-        # Ask if we should continue
-        ans = input("\nShall we continue? [y/n]: ").strip().lower()
-        if ans != 'y':
-            print("🛑 Stopping the analysis.")
-            break
-            
-        level += 1  # Move to next level
+        # Only then ask to continue
+        if level < max_depth - 1 and queue:
+            ans = input("\nContinue to next level? [y/n]: ").strip().lower()
+            if ans != 'y':
+                break
+                    
+            level += 1  # Move to next level
 
-    if level >= max_depth:
-        print("\nMax depth reached.")
-    elif not queue:
-        print("\nNo further levels to explore.")
+            if level >= max_depth:
+                print("\nMax depth reached.")
+            elif not queue:
+                print("\nNo further levels to explore.")
 
 
 if __name__ == "__main__":
