@@ -111,7 +111,7 @@ function createCodeLensButton() {
       imageOverlay.style.zIndex = '10000';
 
       const img = document.createElement('img');
-      img.src = chrome.runtime.getURL('images/commit_graph.cairo.png');
+      img.src = chrome.runtime.getURL('images/commit_history.png'); // Correct image path
       img.alt = 'Commit History Graph';
       img.style.maxWidth = '90%';
       img.style.maxHeight = '90%';
@@ -151,6 +151,7 @@ function createCodeLensButton() {
     document.addEventListener('click', (e) => handleButtonOutsideClick(e, button));
   }, 100);
 }
+
 
 const USER_DOCUMENTATION_FILES = {
   "Novice developer": "Documentation_novice.md",
