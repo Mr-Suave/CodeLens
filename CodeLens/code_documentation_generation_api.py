@@ -33,7 +33,7 @@ def extract_adjacency_list(function_list_path):
     Returns tuple of (all_functions, call_graph)
     """
     if not os.path.exists(function_list_path):
-        print(f"Error: Function list file not found at {function_list_path}")
+        print(f"Error: Function list file not found at {function_list_path}. PLease generate the function graph usign the command codelens findbug")
         return [], {}
     
     try:
