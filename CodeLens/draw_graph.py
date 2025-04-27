@@ -353,6 +353,10 @@ def get_code_blocks_for_nodes(nodes: ast.Set[ast.Tuple[str, str]]) -> ast.Dict[s
         code = extract_function_code(path, func)
         if code:
             result[f"{path}::{func}"] = code
+    print("Reslt found")
+    for path,func in result:
+        print(f"Function name :{func}")
+        print(f"Code for the function {func}: {code}")
     return result
 
 # BOOM
@@ -486,11 +490,6 @@ def main(repo_path):
             if i + 1 >= sample_count:
                 print(f"... and {len(function_code_blocks) - sample_count} more functions.\n")
                 break
-
-
-    
-
-    
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
