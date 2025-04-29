@@ -147,21 +147,18 @@ function FindBug {
     # Split the comma-separated function list
     $FunctionsList = $SuspectFunctions -split ',' | ForEach-Object { $_.Trim() }
     
-    # Build argument string for the Python script
+    # Build the argument string for the Python script
+    $FunctionsString = ($FunctionsList -join ',')
+
     $Arguments = @(
         "$RepoRoot"
         "--description", """$Description"""
-        "--functions"
+        "--functions", """$FunctionsString"""
     )
-    
-    # Add all functions after the --functions flag
-    foreach ($function in $FunctionsList) {
-        $Arguments += """$function"""
-    }
-    
-    # Call Python script with the correct argument structure
+
+    # Call Python script
     py $ScriptPath $Arguments
-    
+
     Write-Host "Bug tracing initiated based on description and suspect functions..."
 }
     

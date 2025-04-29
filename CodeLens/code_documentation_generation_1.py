@@ -26,7 +26,7 @@ def generate_documentation(user_type,repo_path):
     """Generates documentation using multiple sources and writes to Documentation to repo."""
 
     data_extraction_dir = os.path.join(repo_path,"Data_Extraction_Files")
-    doc_file_path=os.path.join(repo_path,f"Documentation_{user_type}.txt")
+    doc_file_path=os.path.join(repo_path,f"Documentation_{user_type}.md")
 
     if not os.path.exists(data_extraction_dir):
         print(f"Error: Folder '{data_extraction_dir} not found' not found!")
@@ -78,7 +78,7 @@ def generate_documentation(user_type,repo_path):
 
     print("Generating the documentation")
     start_time=time.time()
-    response=ollama.generate(model="deepseek-coder:6.7b",prompt=prompt)
+    response=ollama.generate(model="deepseek-coder-v2:latest",prompt=prompt)   # chnage the model name to deepseek-coder-v2:latest but should be just deepseek-coder:6.7b.
     print("Done")
     print(f"Time taken: {time.time() - start_time:.2f} seconds")
 
@@ -90,8 +90,8 @@ def generate_documentation(user_type,repo_path):
     print(f"Documentation saved to {doc_file_path}")
 
 if __name__=="__main__":
-    if len(sys.argv)<2:
-        print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type]")
+    if len(sys.argv)<3:
+        print("Usage: python generate_docs.py <path_to_cloned_repo> [user_type] [local_file_path]")
         sys.exit(1)
     repo_path=os.path.abspath(sys.argv[1])
     user_type=sys.argv[2] if len(sys.argv) > 2 else "client"
@@ -99,10 +99,10 @@ if __name__=="__main__":
     generate_documentation(user_type,repo_path)
 
     # calling the next step file
-    cwd=os.getcwd()
-    server_script_dir= os.path.abspath(os.path.join(cwd,"..","Server"))
-
-    command=f"python app.py {sys.argv[1]}"
+    cwd=sys.argv[3]
+    server_script_dir= os.path.abspath(os.path.join(cwd,"Server"))
+    print(f"Server script directory: {server_script_dir}")
+    command=f"py app.py {sys.argv[1]}"
 
     print(f"Running: {command} in {server_script_dir}")
     try:

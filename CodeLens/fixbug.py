@@ -515,7 +515,7 @@ def main(repo_path, description="", suspect_functions=None):
                 f.write(f"{clean_node_label(func)} --> {', '.join(clean_node_label(callee) for callee in graph[func])}\n")
     
     print("\nResults written to function_list.txt")
-
+    print("Supect functions for BFS analysis:", suspect_functions)
     # Now perform BFS on suspect functions
     if not suspect_functions:
         # If no suspect functions provided, ask the user
@@ -523,22 +523,46 @@ def main(repo_path, description="", suspect_functions=None):
         print("Enter function names to analyze (comma separated):")
         user_input = input("> ")
         suspect_functions = [name.strip() for name in user_input.split(',')]
+        print(f"Suspect functions:", suspect_functions)
     
     # Find matching functions in the codebase
+    # suspects = []
+    # for func_name in suspect_functions:
+    #     # Look for exact matches or functions containing the specified name
+    #     matches = [f for f in all_functions if func_name in f or func_name in clean_node_label(f)]
+        
+    #     if matches:
+    #         if len(matches) > 1:
+    #             print(f"\nMultiple matches found for '{func_name}':")
+    #             for i, match in enumerate(matches[:10]):
+    #                 print(f"{i+1}. {clean_node_label(match)}")
+    #             try:
+    #                 choice = int(input("Select a number (or 0 to skip): "))
+    #                 if 1 <= choice <= len(matches[:10]):
+    #                     suspects.append(matches[choice-1])
+    #             except (ValueError, IndexError):
+    #                 print(f"Skipping '{func_name}'")
+    #         else:
+    #             suspects.append(matches[0])
+    #             print(f"Found match for '{func_name}': {clean_node_label(matches[0])}")
+    #     else:
+    #         print(f"No match found for '{func_name}'")
     suspects = []
     for func_name in suspect_functions:
-        # Look for exact matches or functions containing the specified name
-        matches = [f for f in all_functions if func_name in f or func_name in clean_node_label(f)]
-        
+        matches = []
+        for f in all_functions:
+            cleaned_f = clean_node_label(f)  # Clean the function name once
+            if func_name == f or func_name == cleaned_f or func_name in f or func_name in cleaned_f:
+                matches.append(f)  # Append the original function name
         if matches:
             if len(matches) > 1:
                 print(f"\nMultiple matches found for '{func_name}':")
                 for i, match in enumerate(matches[:10]):
-                    print(f"{i+1}. {clean_node_label(match)}")
+                    print(f"{i + 1}. {clean_node_label(match)}")
                 try:
                     choice = int(input("Select a number (or 0 to skip): "))
                     if 1 <= choice <= len(matches[:10]):
-                        suspects.append(matches[choice-1])
+                        suspects.append(matches[choice - 1])
                 except (ValueError, IndexError):
                     print(f"Skipping '{func_name}'")
             else:
@@ -681,5 +705,9 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--functions", nargs="+", help="List of functions to analyze", default=[])
     
     args = parser.parse_args()
-    
+
+    # Fix: split the string by commas if needed
+    if len(args.functions) == 1:
+        args.functions = args.functions[0].split(' ')
+    print("Printing to check:", args.functions)
     main(args.repo_path, args.description, args.functions)
