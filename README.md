@@ -1,10 +1,9 @@
-# CodeLens
-## Group 9
+# CodeLens - Your top software development utility
 ## Note : To run the tool, naviagate to the root directory of the cloned repo and then run the command : 
 ```
 pip install -r req.txt
 ```
-## Instrcutions for downloading and setting up the tool : 
+## Instructions for downloading and setting up the tool : 
 - Download the zip file of this repo and store it in your machine or clone the repo to your local machine. Extract the Zip file. Then copy the path of the CodeLens folder that is present in the root directory of the repo.
 - Now open the PowerShell and run it as ADMINISTRATOR. In that, run the following commands : 
     ```ins=
