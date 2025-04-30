@@ -1,5 +1,6 @@
 # CodeLens - Your top software development utility
-## Note : To run the tool, naviagate to the root directory of the cloned repo and then run the command : 
+## Installation ✅
+### Note : To run the tool, naviagate to the root directory of the cloned repo and then run the command : 
 ```
 pip install -r req.txt
 ```
@@ -26,10 +27,9 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
     - Name : CODELENS_PATH
     - Value : Path of the CodeLens folder in the root directory of the repo. (Please note that there is a folder called CodeLens inside the repo root folder whose name is also CodeLens. Copy the path of the folder that is present in the root directory of the repo not the path of the repo)
 
-After completing the above instructions, restart the power shell or favourite terminal and execute the command ```codelens```. If the above process correctly, there should be an output on the terminal : ```Use: codelens generate```.
+After completing the above instructions, restart the power shell or favourite terminal and execute the command ```codelens```. You should see usage instructions and commands offered, done!
 
-To run the tool, run the command ```codelens generate```.
-
+## Read more 👇
 ### What is our project all about?
 If you were to contribute to an open source project, or take over your collagues project - you would have to look at their codebase **and understand it throughly.**
 Now take a moment to think about how much time you would spend doing that.
