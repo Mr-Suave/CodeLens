@@ -5,7 +5,7 @@ from typing import List
 import google.generativeai as genai
 import time
 
-GEMINI_API_KEY = "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
+GEMINI_API_KEY = "AIzaSyCBYIosCIl1nizUdA4M1qjqueTh2e-36s4"
 genai.configure(api_key=GEMINI_API_KEY)
 
 def chunk_code(lines, max_chars=20000): # we are considering the default max_chars to be 10000

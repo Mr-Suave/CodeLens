@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import google.generativeai as genai
 from typing import Set, Tuple, Dict
 
-GEMINI_API_KEY = "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
+GEMINI_API_KEY = "AIzaSyCBYIosCIl1nizUdA4M1qjqueTh2e-36s4"
 genai.configure(api_key=GEMINI_API_KEY)
 # Directories to exclude from analysis
 EXCLUDED_DIRS = [
