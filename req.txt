@@ -26,4 +26,4 @@ ollama
 requests
 transformers
 pymongo==4.4.1
-
+gitpython
