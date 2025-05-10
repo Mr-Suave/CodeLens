@@ -278,7 +278,7 @@ else{
     Write-Host "  codelens regenerate"
     Write-Host "  codelens commit"
     Write-Host "  codelens findbug {description_string} {suspect_functions_list}"
-    Write-Host "  Ex: codelens findbug "App crashes when uploading image" uploadImage,handleImageInput,sendToServer"
+    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" uploadImage,handleImageInput,sendToServer"
     Write-Host "  codelens commitgraph N"
     exit 1
 }
