@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "CodeLens",
+  "version": "1.0",
+  "description": "Enhances GitHub repository navigation with documentation and visualization tools.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://api.github.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src blob:;"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/d3.min.js", "graph.js", "images/*"],
+      "matches": ["https://github.com/*"]
+    }
+  ]
+}
