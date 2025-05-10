@@ -18,10 +18,9 @@ COMMENT_PATTERNS = {
 # Set Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AIzaSyDl8h1PkdfpzzFsZg5IkkeGe7QF5bYuvMI"
 genai.configure(api_key=GEMINI_API_KEY)
-
 model = genai.GenerativeModel("models/gemini-1.5-pro-002")
 
-MAX_PROMPT_LENGTH = 25000  # Conservative safe limit to avoid prompt size errors
+MAX_PROMPT_LENGTH = 25000  # Safe limit for prompt size
 
 def get_git_modified_and_untracked_files():
     try:
@@ -40,8 +39,7 @@ def get_git_modified_and_untracked_files():
 
 def get_git_diff(file_path):
     try:
-        # Get the diff for the modified file from the last commit
-        diff = subprocess.check_output(['git', 'diff', '--', file_path], universal_newlines=True)
+        diff = subprocess.check_output(['git', 'diff', '--', file_path], encoding='utf-8', errors='ignore')
         return diff
     except subprocess.CalledProcessError as e:
         print(f"Error getting git diff for {file_path}: {e}")
@@ -69,101 +67,75 @@ def generate_commit_message_from_prompt(prompt):
         print(f"Error generating commit message: {e}")
         return "Update project files."
 
-def main():
+def build_prompt_data():
     files = get_git_modified_and_untracked_files()
-    if not files:
-        print("No modified or untracked files found.")
-        return
-
-    print("Scanning modified files...\n")
-
-    total_diff = ""
+    full_contents = []
+    diffs = []
     fallback_comments = []
 
     for file in files:
-        diff = get_git_diff(file)
-        if diff:  # Proceed only if diff content is available
-            total_diff += f"\n\n# FILE: {file}\n{diff}"
-
-            pattern = COMMENT_PATTERNS.get(os.path.splitext(file)[1])
+        ext = os.path.splitext(file)[1]
+        file_content = read_file(file)
+        if file_content:
+            full_contents.append(f"\n\n# FILE CONTENT: {file}\n{file_content}")
+            pattern = COMMENT_PATTERNS.get(ext)
             if pattern:
-                content = read_file(file)
-                fallback_comments.extend(extract_comments(content, pattern))
+                fallback_comments.extend(extract_comments(file_content, pattern))
 
-    if len(total_diff) <= MAX_PROMPT_LENGTH:
-        print("✅ Using diff content for commit generation.")
+        file_diff = get_git_diff(file)
+        if file_diff:
+            diffs.append(f"\n\n# DIFF: {file}\n{file_diff}")
+
+    return full_contents, diffs, fallback_comments
+
+def generate_commit_message(full_contents, diffs, fallback_comments):
+    full_prompt = "\n".join(full_contents + diffs)
+
+    if len(full_prompt) <= MAX_PROMPT_LENGTH:
+        # print("Using full content + diffs for commit generation.")
         prompt = f"""
-You are an AI assistant. Based on the following git diffs of recently modified source code files,
+You are an AI assistant. Based on the following contents and diffs of recently modified and untracked files,
 generate a short and meaningful Git commit message summarizing the purpose of the changes.
+Only return the commit message. Don't include any acknowledgement in the commit message as this would directly go to the github repo. So generate only a commit message. You can think of as you are writing a commit message when you are committing in a git hub repo.
+You will be given the difference between the files that are changed in the git hub from last commit to this commit. You will also be given the files that are untracked and modified files that are newly going to the repo.
+Final word generate responsibly.
 
 Only return the commit message.
 
 ---
-{total_diff}
+{full_prompt}
 ---
 """
-        commit_message = generate_commit_message_from_prompt(prompt)
+        return generate_commit_message_from_prompt(prompt)
     elif fallback_comments:
-        print("Prompt too long. Falling back to comments.")
+        print(" Prompt too long. Falling back to extracted comments.")
         prompt = f"""
-You are an AI assistant. Based on the following comments extracted from recently modified source code files,
+You are an AI assistant. Based on the following comments extracted from recently modified or untracked source code files,
 generate a short and meaningful Git commit message that summarizes the purpose of the changes.
-
-Only return the commit message.
 
 ---
 {chr(10).join(fallback_comments)}
 ---
 """
-        commit_message = generate_commit_message_from_prompt(prompt)
+        return generate_commit_message_from_prompt(prompt)
     else:
-        print("No valid content or comments found. Defaulting.")
-        commit_message = "Update project files."
+        print(" No valid data found. Using default commit message.")
+        return "Update project files."
+
+def main():
+    full_contents, diffs, fallback_comments = build_prompt_data()
+    if not full_contents and not diffs:
+        print("No modified or untracked files found.")
+        return
+
+    commit_message = generate_commit_message(full_contents, diffs, fallback_comments)
 
     print("\nSuggested Commit Message:\n")
     print(f"\"{commit_message}\"\n")
 
 if __name__ == "__main__":
     if "--generate-only" in sys.argv:
-        files = get_git_modified_and_untracked_files()
-        total_diff = ""
-        fallback_comments = []
-
-        for file in files:
-            diff = get_git_diff(file)
-            if diff:  # Proceed only if diff content is available
-                total_diff += f"\n\n# FILE: {file}\n{diff}"
-
-                pattern = COMMENT_PATTERNS.get(os.path.splitext(file)[1])
-                if pattern:
-                    content = read_file(file)
-                    fallback_comments.extend(extract_comments(content, pattern))
-
-        if len(total_diff) <= MAX_PROMPT_LENGTH:
-            prompt = f"""
-You are an AI assistant. Based on the following git diffs of recently modified source code files,
-generate a short and meaningful Git commit message summarizing the purpose of the changes.
-
-Only return the commit message.
-
----
-{total_diff}
----
-"""
-            print(generate_commit_message_from_prompt(prompt))
-        elif fallback_comments:
-            prompt = f"""
-You are an AI assistant. Based on the following comments extracted from recently modified source code files,
-generate a short and meaningful Git commit message that summarizes the purpose of the changes.
-
-Only return the commit message.
-
----
-{chr(10).join(fallback_comments)}
----
-"""
-            print(generate_commit_message_from_prompt(prompt))
-        else:
-            print("Update project files.")
+        full_contents, diffs, fallback_comments = build_prompt_data()
+        print(generate_commit_message(full_contents, diffs, fallback_comments))
     else:
         main()

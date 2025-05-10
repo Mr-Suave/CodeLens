@@ -301,6 +301,10 @@ def get_code_blocks_for_nodes(nodes):
         code = extract_function_code(path, func)
         if code:
             result[f"{path}::{func}"] = code
+    print("Reslt found")
+    for path,func in result:
+        print(f"Function name :{func}")
+        print(f"Code for the function {func}: {code}")
     return result
 
 
