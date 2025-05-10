@@ -1,8 +1,7 @@
 param (
     [string]$Command,
     [string]$Arg1,
-    [string]$Arg2,
-    [int]$NumCommits
+    [string]$Arg2
 )
 $ValidUserTypes = @("novice","senior","client")
 
@@ -55,7 +54,7 @@ function GenerateCommitGraph {
     }
 
     # Run the Python script to generate the commit graph, passing the number of commits as an argument
-    py $ScriptPath $RepoRoot $NumCommits
+    py $ScriptPath $RepoRoot $Arg1
 
     Write-Host "Commit graph generation triggered."
 }
@@ -256,15 +255,22 @@ elseif ($Command -eq "findbug") {
     FindBug
 }
 elseif($Command -eq "commitgraph") {
-    if (-not $NumCommits) {
+    if (-not $Arg1){
         Write-Host "Error: Please specify the number of commits (N). Usage: codelens commitgraph N"
-        exit 1
+        exit 1  
     }
-    
+    # $NumCommits = [int]$Arg1
     GenerateCommitGraph
+    # if (-not $NumCommits) {
+    #     Write-Host "Error: Please specify the number of commits (N). Usage: codelens commitgraph N"
+    #     exit 1
+    # }
+    
+    # GenerateCommitGraph
 }
 
 else{
+    Write-Host "WELCOME TO CODELENS - YOUR ONE STOP SOFTWARE DEVELOPMENT UTILITY. BE FAST. BE AMAZING. BE CODELENS."
     Write-Host "Usage:"
     Write-Host "  codelens generate {user_type}"
     Write-Host "  codelens commentify {file_path}"
@@ -272,7 +278,7 @@ else{
     Write-Host "  codelens regenerate"
     Write-Host "  codelens commit"
     Write-Host "  codelens findbug {description_string} {suspect_functions_list}"
-    Write-Host "  Ex: codelens findbug `"App crashes when uploading image`" uploadImage handleImageInput sendToServer"
-    Write-Host "Error: Invalid command. Usage: codelens commitgraph N"
+    Write-Host "  Ex: codelens findbug "App crashes when uploading image" uploadImage,handleImageInput,sendToServer"
+    Write-Host "  codelens commitgraph N"
     exit 1
 }
